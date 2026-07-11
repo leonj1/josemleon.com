@@ -1,30 +1,39 @@
-# josemleon.com
+**Welcome to your Base44 project** 
 
-Personal website / portfolio for Jose Leon. Single-page app (home, about, blog, contact, resume). Static — no backend, no build step.
+**About**
 
-**Stack:** AngularJS 1.x (`ui-router`, `ui-bootstrap`), Bootstrap 3, RequireJS, jQuery.
+View and Edit  your app on [Base44.com](http://Base44.com) 
 
-## Run it
+This project contains everything you need to run your app locally.
 
-Needs an HTTP server — RequireJS loads templates via `XHR`, so `file://` won't work.
+**Edit the code in your local development environment**
 
-```bash
-git clone https://github.com/leonj1/josemleon.com
-cd josemleon.com
-python3 -m http.server 8000
+Any change pushed to the repo will also be reflected in the Base44 Builder.
+
+**Prerequisites:** 
+
+1. Clone the repository using the project's Git URL 
+2. Navigate to the project directory
+3. Install dependencies: `npm install`
+4. Create an `.env.local` file and set the right environment variables
+
+```
+VITE_BASE44_APP_ID=your_app_id
+VITE_BASE44_APP_BASE_URL=your_backend_url
+
+e.g.
+VITE_BASE44_APP_ID=cbef744a8545c389ef439ea6
+VITE_BASE44_APP_BASE_URL=https://my-to-do-list-81bfaad7.base44.app
 ```
 
-Open http://localhost:8000
+Run the app: `npm run dev`
 
-Standalone resume also lives at http://localhost:8000/resume/ (plus PDF in `resume/`).
+**Publish your changes**
 
-## Layout
+Open [Base44.com](http://Base44.com) and click on Publish.
 
-| Path         | What                                             |
-|--------------|--------------------------------------------------|
-| `index.html` | SPA shell, loads Angular + libs                  |
-| `js/app.js`  | Routes / `ui-router` states                      |
-| `views/`     | Page templates (home, about, blog, contact, ...) |
-| `css/`       | Custom styles                                    |
-| `lib/`       | Vendored deps (angular, bootstrap, jquery, ...)  |
-| `resume/`    | Standalone resume page + PDF                      |
+**Docs & Support**
+
+Documentation: [https://docs.base44.com/Integrations/Using-GitHub](https://docs.base44.com/Integrations/Using-GitHub)
+
+Support: [https://app.base44.com/support](https://app.base44.com/support)
