@@ -13,8 +13,10 @@ export default function Home() {
       <header className="border-b border-black/10">
         <div className="max-w-3xl mx-auto px-6 py-6 flex flex-col items-center justify-center">
           <img 
-            src="https://avatars.githubusercontent.com/u/5171829?v=4" 
+            src="https://avatars.githubusercontent.com/u/5171829?v=4&s=160"
             alt="Jose Leon"
+            width={80}
+            height={80}
             className="w-20 h-20 rounded-full mb-3"
           />
           <span

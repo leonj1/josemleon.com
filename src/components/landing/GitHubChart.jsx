@@ -8,7 +8,10 @@ export default function GitHubChart() {
           <img
             src="https://ghchart.rshah.org/409ba5/leonj1"
             alt="GitHub Contributions"
-            className="w-full max-w-2xl"
+            loading="lazy"
+            width={663}
+            height={104}
+            className="w-full max-w-2xl h-auto"
             style={{ imageRendering: 'crisp-edges' }}
           />
         </div>
