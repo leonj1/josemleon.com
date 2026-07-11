@@ -1,9 +1,6 @@
 (function() {
 	var templates = angular.module('templates', []),
-		app = angular.module('app', ['ui.router', 'navController', 'ngAnimate', 'ui.bootstrap', 'templates'])
-
-	// define for requirejs loaded modules
-	define('app', [], function() { return app; });
+		app = angular.module('app', ['ui.router', 'navController', 'templates'])
 
 	app.config(function($stateProvider, $urlRouterProvider, $controllerProvider){
 		var origController = app.controller
