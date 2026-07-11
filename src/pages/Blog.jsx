@@ -102,9 +102,6 @@ export default function Blog() {
               <p className="font-serif text-lg text-stone-600 leading-relaxed">
                 {post.excerpt}
               </p>
-              <button className="mt-4 text-sm font-sans tracking-wide uppercase text-stone-950 hover:underline">
-                Read More →
-              </button>
             </article>
           ))}
         </div>
