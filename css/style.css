@@ -114,10 +114,76 @@ a:focus {
   color: #ffffff;
 }
 
+.homepage-main-banner .banner-subtitle {
+  font-size: 20px;
+  font-weight: 300;
+  color: #bee3f8;
+  margin-bottom: 15px;
+}
+
+.homepage-main-banner .banner-intro {
+  max-width: 520px;
+}
+
+/* Action buttons inside the banner */
+.banner-actions {
+  margin-top: 25px;
+}
+
+.homepage-main-banner a.btn-banner {
+  color: #ffffff;
+  background-color: transparent;
+  border: 2px solid rgba(255, 255, 255, 0.7);
+  border-radius: 4px;
+  text-decoration: none;
+  padding: 8px 20px;
+  margin: 0 8px 8px 0;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.homepage-main-banner a.btn-banner:hover,
+.homepage-main-banner a.btn-banner:focus {
+  background-color: rgba(255, 255, 255, 0.15);
+  border-color: #ffffff;
+  color: #ffffff;
+}
+
+.homepage-main-banner a.btn-banner-primary {
+  background-color: #ffffff;
+  border-color: #ffffff;
+  color: #2b6cb0;
+  font-weight: 600;
+}
+
+.homepage-main-banner a.btn-banner-primary:hover,
+.homepage-main-banner a.btn-banner-primary:focus {
+  background-color: #ebf4fb;
+  border-color: #ebf4fb;
+  color: #1a4e85;
+}
+
 /* Profile image inside the banner */
 .element {
+  display: block;
   width: 100%;
+  max-width: 320px;
   height: auto;
+  margin: 30px auto 0;
+  border-radius: 50%;
+  border: 4px solid rgba(255, 255, 255, 0.4);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+}
+
+@media (min-width: 992px) {
+  .element {
+    margin-top: 0;
+  }
+}
+
+/* GitHub contribution chart below the banner */
+.contribution-chart {
+  padding-top: 30px;
+  padding-bottom: 10px;
 }
 
 /* --- Footer --------------------------------------------------------------- */
