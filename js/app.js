@@ -5,26 +5,6 @@
 	// define for requirejs loaded modules
 	define('app', [], function() { return app; });
 
-	// function for dynamic load with requirejs of a javascript module for use with a view
-	// in the state definition call add property `resolve: req('/views/ui.js')`
-	// or `resolve: req(['/views/ui.js'])`
-	// or `resolve: req('views/ui')`
-	function req(deps) {
-		if (typeof deps === 'string') deps = [deps];
-		return {
-			deps: function ($q, $rootScope) {
-				var deferred = $q.defer();
-				require(deps, function() {
-					$rootScope.$apply(function () {
-						deferred.resolve();
-					});
-					deferred.resolve();
-				});
-				return deferred.promise;
-			}
-		}
-	}
-
 	app.config(function($stateProvider, $urlRouterProvider, $controllerProvider){
 		var origController = app.controller
 		app.controller = function (name, constructor){
@@ -60,40 +40,11 @@
 					pageTitle: 'Contact'
 				}
 			})
-			.state('contact.list', {
-				url: "/list",
-				templateUrl: viewsPrefix + "contact-list.html",
-				controller: function($scope){
-					$scope.things = ["A", "Set", "Of", "Things"];
-				}
-			})
-			.state('theme', {
-				url: "/theme",
-				templateUrl: viewsPrefix + "theme.html",
-				data: {
-					pageTitle: 'Theme Example'
-				}
-			})
 			.state('blog', {
 				url: "/blog",
 				templateUrl: viewsPrefix + "blog.html",
 				data: {
 					pageTitle: 'Blog'
-				}
-			})
-			.state('grid', {
-				url: "/grid",
-				templateUrl: viewsPrefix + "grid.html",
-				data: {
-					pageTitle: 'Grid'
-				}
-			})
-			.state('ui', {
-				url: "/ui",
-				resolve: req('/views/ui.js'),
-				templateUrl: viewsPrefix + "ui.html",
-				data: {
-					pageTitle: 'UI'
 				}
 			})
 	})
