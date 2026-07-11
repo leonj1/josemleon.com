@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { Home } from "lucide-react";
 
@@ -44,21 +43,12 @@ export default function Blog() {
         <div className="max-w-3xl mx-auto px-6 py-8">
           <div className="flex items-start justify-between">
             <div>
-              <motion.h1
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="font-serif text-4xl md:text-5xl font-bold text-stone-950 mb-2"
-              >
+              <h1 className="fade-in-up font-serif text-4xl md:text-5xl font-bold text-stone-950 mb-2">
                 Writing
-              </motion.h1>
-              <motion.p
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.2 }}
-                className="font-serif text-lg text-stone-500"
-              >
+              </h1>
+              <p className="fade-in font-serif text-lg text-stone-500">
                 Thoughts on technology, leadership, and life
-              </motion.p>
+              </p>
             </div>
             <Link 
               to="/"
@@ -94,13 +84,10 @@ export default function Blog() {
       {/* Blog Posts */}
       <main className="max-w-3xl mx-auto px-6 py-12">
         <div className="space-y-10">
-          {blogPosts[activeCategory].map((post, index) => (
-            <motion.article
+          {blogPosts[activeCategory].map((post) => (
+            <article
               key={post.title}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
-              className="border-b border-stone-200 pb-8"
+              className="fade-in-up border-b border-stone-200 pb-8"
             >
               <time className="text-xs tracking-wide uppercase text-stone-400 font-sans">
                 {new Date(post.date).toLocaleDateString("en-US", {
@@ -118,7 +105,7 @@ export default function Blog() {
               <button className="mt-4 text-sm font-sans tracking-wide uppercase text-stone-950 hover:underline">
                 Read More →
               </button>
-            </motion.article>
+            </article>
           ))}
         </div>
       </main>

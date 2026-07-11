@@ -1,5 +1,4 @@
 import React from "react";
-import { motion } from "framer-motion";
 
 const paragraphs = [
   {
@@ -13,9 +12,9 @@ const paragraphs = [
     content: (
       <>
         By night (and weekend, and whenever I can steal a few hours), I'm deep in the AI agent space—experimenting with multi-agent frameworks, building tools for autonomous software development, and exploring how we make AI systems that actually learn and improve.{" "}
-        <a 
-          href="https://github.com/leonj1/" 
-          target="_blank" 
+        <a
+          href="https://github.com/leonj1/"
+          target="_blank"
           rel="noopener noreferrer"
           className="underline decoration-1 underline-offset-2 hover:text-stone-950 transition-colors"
         >
@@ -47,30 +46,20 @@ export default function BioSection() {
     <section className="pb-12 md:pb-20">
       <div className="max-w-3xl mx-auto px-6">
         {/* Section label */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
-          className="flex items-center gap-4 mb-10"
-        >
+        <div className="fade-in flex items-center gap-4 mb-10">
           <div className="h-[1px] flex-1 bg-stone-200" />
           <span className="text-[10px] tracking-[0.3em] uppercase text-stone-400 font-sans whitespace-nowrap">
             About
           </span>
           <div className="h-[1px] flex-1 bg-stone-200" />
-        </motion.div>
+        </div>
 
         {/* Bio paragraphs */}
         <div className="space-y-6">
           {paragraphs.map((p, i) => (
-            <motion.p
+            <p
               key={i}
-              initial={{ opacity: 0, y: 16 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: "-40px" }}
-              transition={{ duration: 0.6, delay: i * 0.1 }}
-              className={`font-serif text-lg md:text-xl leading-[1.75] text-stone-700 ${
+              className={`fade-in-up font-serif text-lg md:text-xl leading-[1.75] text-stone-700 ${
                 p.emphasis
                   ? "text-stone-950 font-medium border-l-2 border-stone-950 pl-6 ml-0 md:ml-4 italic"
                   : ""
@@ -78,7 +67,7 @@ export default function BioSection() {
             >
               {p.dropcap && <DropCap letter={p.text?.[0] || p.content?.props?.children?.[0]?.[0]} />}
               {p.content ? p.content : (p.dropcap ? p.text.slice(1) : p.text)}
-            </motion.p>
+            </p>
           ))}
         </div>
       </div>
