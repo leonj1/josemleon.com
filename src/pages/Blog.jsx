@@ -1,54 +1,7 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { Home } from "lucide-react";
-
-const categories = ["Technical", "Managerial", "Personal"];
-
-const blogPosts = {
-  Technical: [
-    {
-      title: "Git Ten Commandments",
-      date: "2026-08-10",
-      excerpt: "Ten non-negotiable rules for using Git effectively. Commit often, never merge broken code, write for future maintainers, and never rewrite public history.",
-      body: [
-        "Commit and push often and daily.",
-        "Never merge broken code.",
-        "Write meaningful commit messages for future maintainers.",
-        "Never rewrite public history.",
-        "Always pull before you push.",
-        "Use branches for everything.",
-        "Never commit secrets or credentials.",
-        "Review your changes before merging.",
-        "Never overwrite a commit on a pull request that has already been reviewed.",
-        "Tag releases.",
-      ],
-    },
-    {
-      title: "Building Scalable AI Infrastructure",
-      date: "2026-01-15",
-      excerpt: "Lessons learned from scaling AI platforms to 250,000 requests per second.",
-    },
-    {
-      title: "Multi-Agent Systems in Production",
-      date: "2025-12-08",
-      excerpt: "Practical approaches to deploying autonomous agent frameworks.",
-    },
-  ],
-  Managerial: [
-    {
-      title: "Leading Engineering Teams at Scale",
-      date: "2026-01-22",
-      excerpt: "Principles for building and managing high-performing engineering organizations.",
-    },
-  ],
-  Personal: [
-    {
-      title: "The Iterative Mindset",
-      date: "2025-11-30",
-      excerpt: "Why small changes and quick iterations lead to better outcomes.",
-    },
-  ],
-};
+import { categories, blogPosts } from "@/lib/blog-data";
 
 export default function Blog() {
   const [activeCategory, setActiveCategory] = useState("Technical");
@@ -67,7 +20,7 @@ export default function Blog() {
                 Thoughts on technology, leadership, and life
               </p>
             </div>
-            <Link 
+            <Link
               to="/"
               className="text-stone-400 hover:text-stone-600 transition-colors mt-2"
             >
@@ -103,7 +56,7 @@ export default function Blog() {
         <div className="space-y-10">
           {blogPosts[activeCategory].map((post) => (
             <article
-              key={post.title}
+              key={post.slug}
               className="fade-in-up border-b border-stone-200 pb-8"
             >
               <time className="text-xs tracking-wide uppercase text-stone-400 font-sans">
@@ -114,18 +67,16 @@ export default function Blog() {
                 })}
               </time>
               <h2 className="font-serif text-2xl md:text-3xl font-bold text-stone-950 mt-2 mb-3">
-                {post.title}
+                <Link
+                  to={`/Blog/${post.slug}`}
+                  className="hover:text-stone-600 transition-colors"
+                >
+                  {post.title}
+                </Link>
               </h2>
               <p className="font-serif text-lg text-stone-600 leading-relaxed">
                 {post.excerpt}
               </p>
-              {post.body && (
-                <ol className="mt-4 space-y-2 list-decimal list-inside">
-                  {post.body.map((item, i) => (
-                    <li key={i} className="font-serif text-stone-700">{item}</li>
-                  ))}
-                </ol>
-              )}
             </article>
           ))}
         </div>
