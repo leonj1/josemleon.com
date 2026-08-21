@@ -4,12 +4,27 @@ module.exports = {
     content: ["./index.html", "./src/**/*.{ts,tsx,js,jsx}"],
   theme: {
   	extend: {
+  		fontFamily: {
+  			serif: ['Fraunces', 'Georgia', 'serif'],
+  			sans: ['Inter', 'system-ui', 'sans-serif'],
+  			mono: ['"JetBrains Mono"', 'ui-monospace', 'monospace']
+  		},
   		borderRadius: {
   			lg: 'var(--radius)',
   			md: 'calc(var(--radius) - 2px)',
   			sm: 'calc(var(--radius) - 4px)'
   		},
   		colors: {
+  			ink: '#0B0A08',
+  			coal: '#141210',
+  			ivory: '#ECE7DB',
+  			parchment: '#F4F1E8',
+  			smoke: '#9B9488',
+  			gold: {
+  				DEFAULT: '#C9A25C',
+  				bright: '#E3C88F',
+  				dim: '#8A6F3E'
+  			},
   			background: 'hsl(var(--background))',
   			foreground: 'hsl(var(--foreground))',
   			card: {

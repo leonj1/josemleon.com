@@ -1,8 +1,10 @@
 import React from "react";
 import { Link, useParams } from "react-router-dom";
-import { Home, ArrowLeft, ExternalLink } from "lucide-react";
+import { ArrowLeft, ArrowUpRight } from "lucide-react";
 import { getProjectBySlug } from "@/lib/projects-data";
 import PageNotFound from "@/lib/PageNotFound";
+import SiteNav from "@/components/landing/SiteNav";
+import Reveal from "@/components/landing/Reveal";
 
 function InlineText({ text }) {
   const parts = text.split("`");
@@ -10,7 +12,7 @@ function InlineText({ text }) {
     i % 2 === 1 ? (
       <code
         key={i}
-        className="font-mono text-[0.9em] bg-stone-100 border border-stone-200 rounded px-1 py-0.5 text-stone-800"
+        className="font-mono text-[0.85em] bg-ivory/5 border hairline rounded px-1.5 py-0.5 text-gold-bright"
       >
         {part}
       </code>
@@ -24,29 +26,35 @@ function Block({ block }) {
   switch (block.type) {
     case "p":
       return (
-        <p className="font-serif text-lg text-stone-700 leading-relaxed">
+        <p className="font-serif text-lg text-ivory/80 leading-[1.85]">
           <InlineText text={block.text} />
         </p>
       );
     case "h3":
       return (
-        <h3 className="font-serif text-xl md:text-2xl font-semibold text-stone-950 mt-8 mb-3">
+        <h3 className="font-serif text-xl md:text-2xl text-ivory mt-10 mb-3">
           {block.text}
         </h3>
       );
     case "ul":
       return (
-        <ul className="space-y-2 list-disc list-inside">
+        <ul className="space-y-3">
           {block.items.map((item, i) => (
-            <li key={i} className="font-serif text-stone-700 text-lg leading-relaxed">
-              <InlineText text={item} />
+            <li
+              key={i}
+              className="flex gap-4 font-serif text-lg text-ivory/80 leading-relaxed"
+            >
+              <span className="text-gold shrink-0 mt-0.5">·</span>
+              <span>
+                <InlineText text={item} />
+              </span>
             </li>
           ))}
         </ul>
       );
     case "code":
       return (
-        <pre className="mt-4 mb-4 overflow-x-auto rounded-lg bg-stone-900 p-4 text-sm leading-relaxed text-stone-100 font-mono">
+        <pre className="mt-4 mb-4 overflow-x-auto bg-coal border hairline p-5 text-sm leading-relaxed text-ivory/90 font-mono">
           <code>{block.code}</code>
         </pre>
       );
@@ -55,11 +63,11 @@ function Block({ block }) {
         <div className="mt-4 mb-4 overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-stone-300">
+              <tr className="border-b border-gold/30">
                 {block.headers.map((header) => (
                   <th
                     key={header}
-                    className="font-sans text-xs tracking-wide uppercase text-stone-500 py-2 pr-4 font-semibold"
+                    className="font-mono text-[10px] tracking-[0.2em] uppercase text-gold py-3 pr-4 font-medium"
                   >
                     {header}
                   </th>
@@ -68,11 +76,11 @@ function Block({ block }) {
             </thead>
             <tbody>
               {block.rows.map((row, i) => (
-                <tr key={i} className="border-b border-stone-200">
+                <tr key={i} className="border-b hairline">
                   {row.map((cell, j) => (
                     <td
                       key={j}
-                      className="font-serif text-stone-700 py-2 pr-4 text-base align-top"
+                      className="font-serif text-ivory/80 py-3 pr-4 text-base align-top"
                     >
                       {cell}
                     </td>
@@ -97,63 +105,68 @@ export default function ProjectDetail() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f7f7f2]">
-      <header className="border-b border-black/10">
-        <div className="max-w-3xl mx-auto px-6 py-8">
-          <div className="flex items-start justify-between gap-6">
-            <div className="min-w-0">
+    <div className="grain min-h-screen bg-ink text-ivory">
+      <SiteNav />
+
+      <header className="hero-glow pt-36 pb-12 md:pt-44 md:pb-16 border-b hairline">
+        <div className="max-w-6xl mx-auto px-6 md:px-10">
+          <Reveal>
+            <div className="flex items-center justify-between gap-6 mb-8">
               <Link
                 to="/projects"
-                className="inline-flex items-center gap-1 text-stone-400 hover:text-stone-600 transition-colors mb-3 font-sans text-sm"
+                className="group inline-flex items-center gap-2 font-mono text-[11px] tracking-[0.2em] uppercase text-smoke hover:text-ivory transition-colors"
               >
-                <ArrowLeft className="w-4 h-4" />
+                <ArrowLeft className="w-3.5 h-3.5 transition-transform group-hover:-translate-x-1" />
                 Back to Projects
-              </Link>
-              <h1 className="fade-in-up font-serif text-4xl md:text-5xl font-bold text-stone-950 mb-2">
-                {project.title}
-              </h1>
-              <p className="fade-in font-serif text-lg text-stone-500">
-                {project.tagline}
-              </p>
-            </div>
-            <div className="shrink-0 flex flex-col items-end gap-3 mt-1">
-              <Link
-                to="/"
-                className="text-stone-400 hover:text-stone-600 transition-colors"
-              >
-                <Home className="w-5 h-5" />
               </Link>
               <a
                 href={project.repoUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 font-sans text-sm text-stone-400 hover:text-stone-600 transition-colors"
+                className="group inline-flex items-center gap-1.5 font-mono text-[11px] tracking-[0.2em] uppercase text-gold-bright hover:text-ivory transition-colors"
               >
-                <ExternalLink className="w-4 h-4" />
-                <span className="hidden sm:inline">repo</span>
+                Repo
+                <ArrowUpRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
               </a>
             </div>
-          </div>
+          </Reveal>
+          <Reveal delay={100}>
+            <h1 className="font-serif font-light text-4xl md:text-6xl text-ivory tracking-tight leading-tight mb-6">
+              {project.title}
+            </h1>
+          </Reveal>
+          <Reveal delay={200}>
+            <p className="font-serif italic text-lg md:text-xl text-smoke max-w-3xl">
+              {project.tagline}
+            </p>
+          </Reveal>
         </div>
       </header>
 
-      <main className="max-w-3xl mx-auto px-6 py-12">
-        <article>
-          <p className="font-serif text-xl text-stone-600 leading-relaxed mb-10">
-            {project.summary}
-          </p>
+      <main className="max-w-6xl mx-auto px-6 md:px-10 py-16 md:py-20">
+        <article className="max-w-3xl">
+          <Reveal>
+            <p className="font-serif text-xl md:text-2xl italic text-ivory/70 leading-relaxed border-l-2 border-gold pl-8 mb-14">
+              {project.summary}
+            </p>
+          </Reveal>
 
           {project.sections.map((section) => (
-            <section key={section.heading} className="mb-12">
-              <h2 className="font-serif text-2xl md:text-3xl font-bold text-stone-950 mb-4 border-b border-stone-200 pb-2">
-                {section.heading}
-              </h2>
-              <div className="space-y-4">
-                {section.blocks.map((block, i) => (
-                  <Block key={i} block={block} />
-                ))}
-              </div>
-            </section>
+            <Reveal key={section.heading}>
+              <section className="mb-14">
+                <div className="flex items-center gap-5 mb-7">
+                  <h2 className="font-serif font-light text-2xl md:text-3xl text-ivory whitespace-nowrap">
+                    {section.heading}
+                  </h2>
+                  <span className="h-px flex-1 bg-ivory/10" />
+                </div>
+                <div className="space-y-5">
+                  {section.blocks.map((block, i) => (
+                    <Block key={i} block={block} />
+                  ))}
+                </div>
+              </section>
+            </Reveal>
           ))}
         </article>
       </main>
