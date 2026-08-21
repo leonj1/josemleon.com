@@ -6,6 +6,7 @@ import { pagesConfig } from './pages.config'
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
 import BlogPost from './pages/BlogPost';
+import ProjectDetail from './pages/ProjectDetail';
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
@@ -37,6 +38,11 @@ const AppRoutes = () => {
       <Route path="/Blog/:slug" element={
         <LayoutWrapper currentPageName="BlogPost">
           <BlogPost />
+        </LayoutWrapper>
+      } />
+      <Route path="/projects/:slug" element={
+        <LayoutWrapper currentPageName="ProjectDetail">
+          <ProjectDetail />
         </LayoutWrapper>
       } />
       <Route path="*" element={<PageNotFound />} />
