@@ -1,66 +1,19 @@
 import React from "react";
-import { Linkedin, Github } from "lucide-react";
-import { Link } from "react-router-dom";
-import BioSection from "@/components/landing/BioSection";
+import SiteNav from "@/components/landing/SiteNav";
+import HeroSection from "@/components/landing/HeroSection";
 import CredentialsBar from "@/components/landing/CredentialsBar";
+import StatsStrip from "@/components/landing/StatsStrip";
+import BioSection from "@/components/landing/BioSection";
 import GitHubChart from "@/components/landing/GitHubChart";
 import LandingFooter from "@/components/landing/LandingFooter";
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-[#f7f7f2]">
-      {/* Masthead */}
-      <header className="border-b border-black/10">
-        <div className="max-w-3xl mx-auto px-6 py-6 flex flex-col items-center justify-center">
-          <img 
-            src="https://avatars.githubusercontent.com/u/5171829?v=4&s=160"
-            alt="Jose Leon"
-            width={80}
-            height={80}
-            className="w-20 h-20 rounded-full mb-3"
-          />
-          <span
-            className="font-serif text-[11px] md:text-xs tracking-[0.4em] uppercase text-stone-400"
-          >
-            Jose Leon Personal Portfolio
-          </span>
-          <div className="flex items-center gap-2 mt-1">
-            <span className="font-serif text-[9px] md:text-[10px] text-stone-400">
-              leonj1@gmail.com
-            </span>
-            <a 
-              href="https://www.linkedin.com/in/josemleon/" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="text-stone-400 hover:text-stone-600 transition-colors"
-            >
-              <Linkedin className="w-3 h-3" />
-            </a>
-            <a 
-              href="https://github.com/leonj1/" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="text-stone-400 hover:text-stone-600 transition-colors"
-            >
-              <Github className="w-3 h-3" />
-            </a>
-            <Link 
-              to="/Blog"
-              className="font-serif text-[9px] md:text-[10px] text-stone-400 hover:text-stone-600 transition-colors"
-            >
-              blog
-            </Link>
-            <Link 
-              to="/projects"
-              className="font-serif text-[9px] md:text-[10px] text-stone-400 hover:text-stone-600 transition-colors"
-            >
-              projects
-            </Link>
-          </div>
-        </div>
-      </header>
-
+    <div className="grain min-h-screen bg-ink text-ivory">
+      <SiteNav />
+      <HeroSection />
       <CredentialsBar />
+      <StatsStrip />
       <BioSection />
       <GitHubChart />
       <LandingFooter />

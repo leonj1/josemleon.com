@@ -1,8 +1,10 @@
 import React from "react";
 import { Link, useParams } from "react-router-dom";
-import { Home, ArrowLeft } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { getPostBySlug } from "@/lib/blog-data";
 import PageNotFound from "@/lib/PageNotFound";
+import SiteNav from "@/components/landing/SiteNav";
+import Reveal from "@/components/landing/Reveal";
 
 export default function BlogPost() {
   const { slug } = useParams();
@@ -13,59 +15,68 @@ export default function BlogPost() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f7f7f2]">
-      <header className="border-b border-black/10">
-        <div className="max-w-3xl mx-auto px-6 py-8">
-          <div className="flex items-start justify-between">
-            <div>
-              <Link
-                to="/Blog"
-                className="inline-flex items-center gap-1 text-stone-400 hover:text-stone-600 transition-colors mb-3 font-sans text-sm"
-              >
-                <ArrowLeft className="w-4 h-4" />
-                Back to Writing
-              </Link>
-              <h1 className="fade-in-up font-serif text-4xl md:text-5xl font-bold text-stone-950 mb-2">
-                {post.title}
-              </h1>
-              <time className="font-sans text-sm tracking-wide uppercase text-stone-400">
-                {new Date(post.date).toLocaleDateString("en-US", {
-                  year: "numeric",
-                  month: "long",
-                  day: "numeric",
-                })}
-              </time>
-            </div>
+    <div className="grain min-h-screen bg-ink text-ivory">
+      <SiteNav />
+
+      <header className="hero-glow pt-36 pb-12 md:pt-44 md:pb-16 border-b hairline">
+        <div className="max-w-6xl mx-auto px-6 md:px-10">
+          <Reveal>
             <Link
-              to="/"
-              className="text-stone-400 hover:text-stone-600 transition-colors mt-2"
+              to="/Blog"
+              className="group inline-flex items-center gap-2 font-mono text-[11px] tracking-[0.2em] uppercase text-smoke hover:text-ivory transition-colors mb-8"
             >
-              <Home className="w-5 h-5" />
+              <ArrowLeft className="w-3.5 h-3.5 transition-transform group-hover:-translate-x-1" />
+              Back to Writing
             </Link>
-          </div>
+          </Reveal>
+          <Reveal delay={100}>
+            <h1 className="font-serif font-light text-4xl md:text-6xl text-ivory tracking-tight leading-tight mb-6 max-w-4xl">
+              {post.title}
+            </h1>
+          </Reveal>
+          <Reveal delay={200}>
+            <time className="font-mono text-[10px] tracking-[0.25em] uppercase text-gold">
+              {new Date(post.date).toLocaleDateString("en-US", {
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+              })}
+            </time>
+          </Reveal>
         </div>
       </header>
 
-      <main className="max-w-3xl mx-auto px-6 py-12">
-        <article className="prose prose-stone prose-lg max-w-none">
-          <p className="font-serif text-lg text-stone-600 leading-relaxed">
-            {post.excerpt}
-          </p>
+      <main className="max-w-6xl mx-auto px-6 md:px-10 py-16 md:py-20">
+        <article className="max-w-3xl">
+          <Reveal>
+            <p className="font-serif text-xl md:text-2xl italic text-ivory/70 leading-relaxed border-l-2 border-gold pl-8">
+              {post.excerpt}
+            </p>
+          </Reveal>
 
           {post.body && Array.isArray(post.body) && (
-            <ol className="mt-8 space-y-3 list-decimal list-inside">
-              {post.body.map((item, i) => (
-                <li key={i} className="font-serif text-stone-700 text-lg">
-                  {item}
-                </li>
-              ))}
-            </ol>
+            <Reveal delay={100}>
+              <ol className="mt-12 space-y-5">
+                {post.body.map((item, i) => (
+                  <li key={i} className="flex gap-5 items-baseline">
+                    <span className="font-serif italic text-gold-bright text-xl shrink-0 w-8 text-right">
+                      {i + 1}
+                    </span>
+                    <span className="font-serif text-lg md:text-xl text-ivory/85 leading-relaxed">
+                      {item}
+                    </span>
+                  </li>
+                ))}
+              </ol>
+            </Reveal>
           )}
 
           {post.body && typeof post.body === "string" && (
-            <div className="mt-8 font-serif text-lg text-stone-700 leading-relaxed whitespace-pre-line">
-              {post.body}
-            </div>
+            <Reveal delay={100}>
+              <div className="mt-12 font-serif text-lg md:text-xl text-ivory/85 leading-[1.85] whitespace-pre-line">
+                {post.body}
+              </div>
+            </Reveal>
           )}
         </article>
       </main>
