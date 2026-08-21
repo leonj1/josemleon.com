@@ -60,16 +60,18 @@ export default function Projects() {
                       <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
                     </Link>
                   </div>
-                  <a
-                    href={project.repoUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="group shrink-0 inline-flex items-center gap-1.5 font-mono text-[11px] tracking-[0.2em] uppercase text-smoke hover:text-ivory transition-colors mt-2"
-                    title="View repository"
-                  >
-                    <span className="hidden sm:inline">Repo</span>
-                    <ArrowUpRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
-                  </a>
+                  {project.repoUrl && (
+                    <a
+                      href={project.repoUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="group shrink-0 inline-flex items-center gap-1.5 font-mono text-[11px] tracking-[0.2em] uppercase text-smoke hover:text-ivory transition-colors mt-2"
+                      title="View repository"
+                    >
+                      <span className="hidden sm:inline">Repo</span>
+                      <ArrowUpRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+                    </a>
+                  )}
                 </div>
               </article>
             </Reveal>

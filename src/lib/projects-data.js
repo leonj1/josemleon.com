@@ -6,7 +6,6 @@ const projects = [
       "Generates a self-contained, typed TypeScript API client from an OpenAPI 3.0 spec over HTTP.",
     tagline:
       "Generate an opinionated, typed TypeScript API client from an OpenAPI 3.0 spec, served over HTTP.",
-    repoUrl: "https://github.com/dapidicom/api-generator-ts",
     summary:
       "A Node.js service that turns your OpenAPI 3.0 spec into a self-contained, typed TypeScript API client you can import and call. You provide the spec; it returns the client.",
     sections: [
