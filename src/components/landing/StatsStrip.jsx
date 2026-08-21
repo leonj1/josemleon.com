@@ -2,9 +2,21 @@ import React, { useEffect, useRef, useState } from "react";
 import Reveal from "./Reveal";
 
 const stats = [
-  { target: 250, suffix: "K", unit: "req/sec", label: "Platform Scale" },
-  { target: 99.99, decimals: 2, suffix: "%", unit: "", label: "Availability" },
-  { target: 250, suffix: "×", unit: "", label: "Growth in 4 Years" },
+  {
+    target: 250,
+    suffix: "K",
+    unit: "req/sec",
+    label: "Throughput at scale",
+    caption: "Scaled from 1,000 req/sec in four years",
+  },
+  {
+    target: 99.99,
+    decimals: 2,
+    suffix: "%",
+    unit: "",
+    label: "Availability",
+    caption: "Four-nines SLA on the platforms I build",
+  },
 ];
 
 function CountUp({ target, decimals = 0, suffix = "" }) {
@@ -57,7 +69,7 @@ export default function StatsStrip() {
   return (
     <section className="border-b hairline">
       <div className="max-w-6xl mx-auto px-6 md:px-10 py-16 md:py-24">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-12 md:gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-12 md:gap-8">
           {stats.map((s, i) => (
             <Reveal
               key={s.label}
@@ -78,6 +90,9 @@ export default function StatsStrip() {
               </p>
               <p className="font-mono text-[10px] md:text-[11px] tracking-[0.3em] uppercase text-smoke mt-4">
                 {s.label}
+              </p>
+              <p className="font-serif text-sm md:text-base text-smoke/80 mt-3 max-w-xs mx-auto leading-relaxed">
+                {s.caption}
               </p>
             </Reveal>
           ))}
