@@ -15,5 +15,8 @@ export default defineConfig({
       visualEditAgent: true
     }),
     react(),
-  ]
+  ],
+  preview: {
+    allowedHosts: ['amd.tail6f8ba5.ts.net', '.ts.net'],
+  },
 });

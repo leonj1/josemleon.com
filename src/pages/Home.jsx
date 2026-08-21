@@ -50,6 +50,12 @@ export default function Home() {
             >
               blog
             </Link>
+            <Link 
+              to="/projects"
+              className="font-serif text-[9px] md:text-[10px] text-stone-400 hover:text-stone-600 transition-colors"
+            >
+              projects
+            </Link>
           </div>
         </div>
       </header>
