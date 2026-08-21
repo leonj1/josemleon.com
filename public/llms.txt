@@ -1,0 +1,29 @@
+# Jose M. Leon
+
+> Personal portfolio of Jose M. Leon — SVP of AI Engineering at Blackstone, previously at Google, Bloomberg, and Goldman Sachs. Writing on technology and leadership, plus documented coding projects.
+
+A full-text version with complete post bodies and project documentation is available at [llms-full.txt](https://josemleon.com/llms-full.txt).
+
+## Site
+
+- [Home](https://josemleon.com/): Bio, career credentials, and GitHub contribution chart.
+- [Writing](https://josemleon.com/Blog): Blog index, organized into Technical, Managerial, and Personal categories.
+- [Projects](https://josemleon.com/projects): Index of documented coding projects.
+
+## Writing
+
+- [Git Ten Commandments](https://josemleon.com/Blog/git-ten-commandments) (2026-08-10, Technical): Ten non-negotiable rules for using Git effectively — commit often, never merge broken code, write for future maintainers, never rewrite public history.
+- [Leading Engineering Teams at Scale](https://josemleon.com/Blog/leading-engineering-teams-at-scale) (2026-01-22, Managerial): Principles for building and managing high-performing engineering organizations.
+- [Building Scalable AI Infrastructure](https://josemleon.com/Blog/building-scalable-ai-infrastructure) (2026-01-15, Technical): Lessons from scaling AI platforms to 250,000 requests per second.
+- [Multi-Agent Systems in Production](https://josemleon.com/Blog/multi-agent-systems-in-production) (2025-12-08, Technical): Practical approaches to deploying autonomous agent frameworks.
+- [The Iterative Mindset](https://josemleon.com/Blog/the-iterative-mindset) (2025-11-30, Personal): Why small changes and quick iterations lead to better outcomes.
+
+## Projects
+
+- [api-generator](https://josemleon.com/projects/api-generator): A Node.js service that generates a self-contained, typed TypeScript API client from an OpenAPI 3.0 spec over HTTP. Source at https://github.com/dapidicom/api-generator-ts.
+
+## Elsewhere
+
+- [GitHub](https://github.com/leonj1/): Agent training systems, episodic memory for coding agents, and frameworks for agentic quality engineering.
+- [LinkedIn](https://www.linkedin.com/in/josemleon/): Professional profile.
+- [Email](mailto:leonj1@gmail.com): leonj1@gmail.com
