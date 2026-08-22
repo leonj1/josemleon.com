@@ -41,11 +41,11 @@ Support: [https://app.base44.com/support](https://app.base44.com/support)
 ## Performance metrics (self-hosted Web Vitals)
 
 The SPA reports Core Web Vitals from real visitors, sending one beacon per
-metric to `POST /metrics`. In production, nginx proxies that endpoint to the
-`metrics-ingest` service, which converts each beacon into a Prometheus
-exposition line and writes it to VictoriaMetrics. Everything is self-hosted
-under docker compose — no third-party calls. For the ingest service's own
-unit-test and contract-test workflow, see
+metric to `POST /metrics`. In the local docker compose stack, nginx proxies
+that endpoint to the `metrics-ingest` service, which converts each beacon into
+a Prometheus exposition line and writes it to VictoriaMetrics. Everything is
+self-hosted under docker compose — no third-party calls. For the ingest
+service's own unit-test and contract-test workflow, see
 [metrics-ingest/README.md](metrics-ingest/README.md).
 
 ### Running the stack — Make targets
@@ -106,10 +106,28 @@ survives `make restart` and `make stop`/`make start`. `make stop` never passes
 
 ### Supported runtime
 
-Docker compose via the Makefile is the only supported way to run the site
-image. Standalone `docker run` of the site image is not supported: the image
-requires `INGEST_PORT` (it exits with a clear error when unset) and a network
-where the ingest service's hostname resolves. `INGEST_HOST` defaults to
-`metrics-ingest` (the compose network name); on Railway it must be set to the
-ingest service's private-network domain, e.g. `metrics-ingest.railway.internal`.
-`docker build` on its own still works.
+The site image runs standalone with no environment variables; `PORT` defaults
+to `80`:
+
+```sh
+docker build -t site .
+docker run --rm -p 8080:80 site
+```
+
+The `/metrics` proxy is disabled by default. Set `METRICS_PROXY=1` to enable
+it. When enabled, `INGEST_PORT` is required and `INGEST_HOST` defaults to
+`metrics-ingest`; the container must be attached to a network where that host
+resolves:
+
+```sh
+docker run --rm -p 8080:80 \
+  -e METRICS_PROXY=1 \
+  -e INGEST_PORT=9091 \
+  -e INGEST_HOST=metrics-ingest \
+  site
+```
+
+The local compose `site` service sets `METRICS_PROXY=1` and
+`INGEST_PORT=9091`, preserving the `/metrics` connection to the
+`metrics-ingest` service. Use the Make targets above for the supported local
+metrics stack.

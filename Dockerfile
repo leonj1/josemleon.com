@@ -7,6 +7,9 @@ RUN npm run build
 
 FROM nginx:1.27-alpine
 COPY --from=build /app/dist /usr/share/nginx/html
-COPY nginx.conf.template /etc/nginx/templates/default.conf.template
+COPY nginx/metrics.conf.template /etc/nginx/site-templates/metrics.conf.template
+COPY nginx/default.conf.template /etc/nginx/site-templates/default.conf.template
+COPY nginx/start-site.sh /usr/local/bin/start-site.sh
+RUN chmod +x /usr/local/bin/start-site.sh
 EXPOSE 80
-CMD export PORT="${PORT:-80}" INGEST_HOST="${INGEST_HOST:-metrics-ingest}" && : "${INGEST_PORT:?INGEST_PORT is required}" && envsubst '$PORT $INGEST_PORT $INGEST_HOST' < /etc/nginx/templates/default.conf.template > /etc/nginx/conf.d/default.conf && exec nginx -g 'daemon off;'
+CMD ["/usr/local/bin/start-site.sh"]
