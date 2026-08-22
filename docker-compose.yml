@@ -1,0 +1,22 @@
+services:
+  victoriametrics:
+    image: victoriametrics/victoria-metrics
+    command: ["-retentionPeriod=12"]
+    ports:
+      - "127.0.0.1:8428:8428"
+    volumes:
+      - vm-data:/victoria-metrics-data
+
+  metrics-ingest:
+    build:
+      context: ./metrics-ingest
+    depends_on:
+      - victoriametrics
+    environment:
+      VM_IMPORT_URL: http://victoriametrics:8428/api/v1/import/prometheus
+      PORT: "9091"
+    ports:
+      - "127.0.0.1:9091:9091"
+
+volumes:
+  vm-data:
