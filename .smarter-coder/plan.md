@@ -29,6 +29,17 @@ Findings:
   kebab-case modules (`query-client.js`, `projects-data.js`, `app-params.js`);
   the `@/` path alias resolves to `src/` (used by `main.jsx` already); no site
   test framework exists, so reporter verification is manual per PLAN.md.
+- **Pre-existing baseline defect (discovered in milestone 3 step 1 execution,
+  verified via git stash to predate the feature):** `npm run typecheck`
+  (`tsc -p ./jsconfig.json`) fails on the clean tree with 8 TS2339 errors, all
+  in `src/lib/app-params.js` — 5 from `setItem`/`getItem`/`removeItem` calls on
+  the union `Storage | Map<any, any>` (line 2 uses a `Map` as the Node-side
+  localStorage stand-in), 3 from untyped `import.meta.env` (jsconfig has
+  `"types": []`, so Vite's `ImportMeta.env` augmentation is absent). The file
+  sits in jsconfig's `exclude` list but is still checked because it is
+  import-reachable from included files (`exclude` only limits the `include`
+  globs, not import resolution). Repaired type-only in milestone 3 step 1
+  (revised); no runtime behavior change.
 - `Dockerfile` (repo root): multi-stage node:22-alpine build → nginx:1.27-alpine,
   envsubst of `nginx.conf.template` with `$PORT` only. The template's envsubst
   variable list must gain `$INGEST_PORT` when the `/metrics` proxy location is
@@ -69,10 +80,13 @@ Findings:
 - Ingest beacon contract relevant to the frontend (from
   `metrics-ingest/src/models/WebVitalBeacon.ts`): accepted `navType` values are
   exactly `"navigate" | "reload" | "back-forward" | "prerender"`; anything else
-  → 400 with zero writes. web-vitals v4/v5's `Metric.navigationType` can emit
-  `"navigate" | "reload" | "back-forward" | "back-forward-cache" | "prerender" |
-  "restore"` (already hyphenated), so the reporter must normalize/filter (see
-  milestone 3 step 1 for the decided handling).
+  → 400 with zero writes. The installed `web-vitals` is **6.1.1** (milestone 3
+  step 1 execution); its `Metric.navigationType` union is
+  `"navigate" | "reload" | "back-forward" | "back-forward-cache" | "prerender"
+  | "restore" | "soft-navigation"` (already hyphenated). The reporter's
+  normalize/drop logic (milestone 3 step 2) covers every member:
+  `back-forward-cache` → `back-forward`; `restore`, `soft-navigation`, and
+  undefined are dropped before sending.
 
 Build/test commands the executor should run:
 
@@ -90,7 +104,9 @@ Build/test commands the executor should run:
   - Docker: `docker build -t metrics-ingest ./metrics-ingest` (from repo root).
 - **Site** (from `/home/jose/src/josemleon.com`):
   - `npm run lint`, `npm run typecheck`, `npm run build`. No site unit tests;
-    all three must stay green at the end of every milestone-3 code step.
+    all three must stay green at the end of every milestone-3 code step
+    (typecheck becomes genuinely green in milestone 3 step 1 — see the baseline
+    defect finding above).
 - **Whole system** (from milestone 4 onward): `make build`, `make test`,
   `make start`, `make stop`, `make restart` at repo root.
 
@@ -111,7 +127,7 @@ Assumptions:
   (kebab-case `src/lib/` module, small verb-named functions, no test framework);
   the size limits (functions < 30 lines, ≤ 2 indent levels) still apply.
 - Commit prefixes: `FEAT:` for behavior steps, `CHORE:` for scaffolding/refactor
-  steps that change no behavior.
+  steps that change no behavior, `BUG:` for defect repairs (milestone 3 step 1).
 - The `victoriametrics/victoria-metrics` image is scratch-based (no shell), so
   compose exec-form healthchecks cannot run inside it; readiness is instead
   polled over HTTP (`GET /health` on 8428) by the contract test itself.
@@ -319,12 +335,14 @@ behavior is proven against the real stopped container (step 3). Execution also
 surfaced the `-search.latencyOffset` 30s query gotcha, now recorded in Codebase
 findings and baked into all later verification instructions.
 
-### Milestone 3 — Frontend beacon (NEXT — fully elaborated)
+### Milestone 3 — Frontend beacon (NEXT — fully elaborated; revised at plan revision 2)
 
 **Goal:** The SPA reports real Web Vitals through the full dev path (browser →
 vite dev proxy → metrics-ingest → VictoriaMetrics).
 
-**Working state at the end:** `web-vitals` is a site dependency;
+**Working state at the end:** `npm run typecheck` at the repo root exits 0 with
+zero errors (the pre-existing `app-params.js` baseline defect is repaired,
+type-only); `web-vitals` (6.1.1) is a site dependency;
 `src/lib/vitals-reporter.js` sends one beacon per metric via
 `navigator.sendBeacon('/metrics', ...)` with a `fetch` keepalive fallback when
 sendBeacon is unavailable, wired once in `src/main.jsx`; `vite.config.js`
@@ -334,25 +352,55 @@ stack up, browsing the dev site makes samples for the visited paths appear via
 `npm run typecheck`, `npm run build` all green; the `metrics-ingest` project is
 untouched.
 
-**Steps** (execute in order; steps 1–2 are code steps — run
+**Steps** (execute in order; steps 1–3 are code steps — run
 `npm run lint && npm run typecheck && npm run build` from
 `/home/jose/src/josemleon.com` at the end of each and keep all three green;
-this milestone touches only the site, never `metrics-ingest/`):
+this milestone touches only the site, never `metrics-ingest/`. Note: the
+working tree already contains step 2's uncommitted work — step 1 must commit
+only its own two files and leave the rest uncommitted):
 
-1. (behavior) From `/home/jose/src/josemleon.com` run `npm install web-vitals`
-   (current major, v4 or v5 — whatever npm resolves; then check the installed
-   package's `navigationType` union in `node_modules/web-vitals` and confirm
-   the normalization below covers every member). Create
+1. (refactor) Repair the pre-existing typecheck baseline defect — type-only, no
+   runtime behavior change. `npm run typecheck` (`tsc -p ./jsconfig.json`)
+   fails on the clean tree with 8 TS2339 errors, all in
+   `/home/jose/src/josemleon.com/src/lib/app-params.js` (the file is in
+   jsconfig's `exclude` list but is still checked because it is import-reachable
+   from included files). Make exactly two edits:
+   (a) in `src/lib/app-params.js` line 3, change
+   `const storage = windowObj.localStorage;` to
+   `const storage = /** @type {Storage} */ (windowObj.localStorage);` — a
+   comment-only JSDoc cast narrowing the `Storage | Map<any, any>` union,
+   fixing the 5 `setItem`/`getItem`/`removeItem` errors; this is safe because
+   the Map arm is dead at runtime for those calls (every storage call site in
+   `getAppParamValue` is behind the `isNode` early return, and under Node
+   `getAppParamValue("clear_access_token")` returns `undefined` so the
+   `removeItem` branch in `getAppParams` never runs) — change no executable
+   code;
+   (b) in `/home/jose/src/josemleon.com/jsconfig.json` change `"types": []` to
+   `"types": ["vite/client"]`, giving `import.meta.env` its Vite typing and
+   fixing the remaining 3 errors (lines 43/46/47); `vite` is already a
+   dependency. If adding `vite/client` surfaces any new type errors elsewhere,
+   fix them with equally type-only changes if trivial, otherwise report
+   `DIVERGENCE` — do not suppress with `@ts-nocheck` or weaken jsconfig.
+   Verify `npm run lint && npm run typecheck && npm run build` — typecheck must
+   exit 0 with zero errors. Commit **only** `src/lib/app-params.js` and
+   `jsconfig.json` (leave the beacon files from step 2 uncommitted). Commit
+   message: `BUG: fix pre-existing typecheck errors in app-params.js`.
+2. (behavior — already implemented in the uncommitted working tree by the
+   pre-divergence execution; validate against the now-green gate and commit)
+   The work: `web-vitals` **6.1.1** installed (`npm install web-vitals`; its
+   `navigationType` union is `"navigate" | "reload" | "back-forward" |
+   "back-forward-cache" | "prerender" | "restore" | "soft-navigation"` — fully
+   covered by the normalization below);
    `/home/jose/src/josemleon.com/src/lib/vitals-reporter.js` (plain JS,
-   kebab-case, matching the existing `src/lib/` modules) exporting a single
+   kebab-case, matching the existing `src/lib/` modules) exports a single
    verb-named function `reportWebVitals()` that imports
    `onLCP, onINP, onCLS, onTTFB, onFCP` from `web-vitals` and registers each
    exactly once with a shared handler which, per metric callback: (a) computes
    `navType` by normalizing `metric.navigationType` — replace every `_` with
-   `-` (defensive, in case a raw `back_forward` ever surfaces), then map
-   `"back-forward-cache"` to `"back-forward"`; if the result is still not one
-   of `"navigate" | "reload" | "back-forward" | "prerender"` (the ingest 400s
-   anything else — e.g. web-vitals' `"restore"`, or an undefined
+   `-` (defensive), then map `"back-forward-cache"` to `"back-forward"`; if the
+   result is still not one of
+   `"navigate" | "reload" | "back-forward" | "prerender"` (the ingest 400s
+   anything else — e.g. `"restore"`, `"soft-navigation"`, or an undefined
    `navigationType`), **return without sending** — a beacon guaranteed to be
    rejected has no value and this drop is the decided handling; (b) builds
    `const body = JSON.stringify({ name: metric.name, value: metric.value,
@@ -360,16 +408,18 @@ this milestone touches only the site, never `metrics-ingest/`):
    metric per beacon, exactly these five fields; (c) sends it with
    `navigator.sendBeacon('/metrics', body)` when `navigator.sendBeacon` is
    available, otherwise `fetch('/metrics', { method: 'POST', body,
-   keepalive: true })` fire-and-forget (no await, no error handling/UI — losing
-   a beacon is acceptable; do not add retries or other unrequested fallbacks).
-   Keep every function under 30 lines and at most 2 indentation levels (extract
-   small helpers like `normalizeNavType` / `sendBeacon` as needed). Wire it
-   once: in `/home/jose/src/josemleon.com/src/main.jsx` add
-   `import { reportWebVitals } from '@/lib/vitals-reporter'` and call
-   `reportWebVitals()` once after the `ReactDOM.createRoot(...).render(...)`
-   call. Verify lint/typecheck/build green. Commit
+   keepalive: true })` fire-and-forget (no await, no error handling/UI, no
+   retries). Functions under 30 lines, ≤ 2 indentation levels. Wired once in
+   `/home/jose/src/josemleon.com/src/main.jsx`:
+   `import { reportWebVitals } from '@/lib/vitals-reporter'` and one
+   `reportWebVitals()` call after `ReactDOM.createRoot(...).render(...)`.
+   In this step: confirm the working tree matches this spec, run
+   `npm run lint && npm run typecheck && npm run build` — all three must now be
+   green (typecheck was repaired in step 1; the new files contribute zero
+   errors). Commit `package.json`, `package-lock.json`,
+   `src/lib/vitals-reporter.js`, and `src/main.jsx` with
    `FEAT: report Core Web Vitals beacons from the SPA`.
-2. (behavior) In `/home/jose/src/josemleon.com/vite.config.js` add a `server`
+3. (behavior) In `/home/jose/src/josemleon.com/vite.config.js` add a `server`
    block alongside the existing `preview` block:
    `server: { proxy: { '/metrics': { target: 'http://127.0.0.1:9091' } } }`
    (hardcoded target per resolved Open decision #2; `127.0.0.1`, not
@@ -377,7 +427,7 @@ this milestone touches only the site, never `metrics-ingest/`):
    resolve `localhost` to `::1`). This affects the dev server only; production
    `/metrics` routing is nginx's job in milestone 4. Verify lint/typecheck/build
    green. Commit `FEAT: proxy /metrics to metrics-ingest in vite dev server`.
-3. (verify — manual end-to-end, no code change, no commit) Prove the full dev
+4. (verify — manual end-to-end, no code change, no commit) Prove the full dev
    path with a real browser:
    - `cd /home/jose/src/josemleon.com/metrics-ingest && npm run compose:up`,
      then confirm `curl -s http://127.0.0.1:9091/healthz` returns 200 and
@@ -405,10 +455,13 @@ this milestone touches only the site, never `metrics-ingest/`):
      and `cd metrics-ingest && npm run build && npm test` (44 tests) green to
      confirm nothing regressed.
 
-**Risks retired:** web-vitals callback payloads map cleanly onto the beacon
-contract (including the navigationType mismatch — `back-forward-cache`/`restore`
-— now explicitly normalized/filtered); sendBeacon + vite proxy path works end to
-end from a real browser into the real store.
+**Risks retired:** the site's typecheck gate is made genuinely green (baseline
+`app-params.js` defect repaired type-only), so every later "all three green"
+gate is meaningful; web-vitals callback payloads map cleanly onto the beacon
+contract (including the navigationType mismatch —
+`back-forward-cache`/`restore`/`soft-navigation` — now explicitly
+normalized/filtered against the installed 6.1.1 union); sendBeacon + vite proxy
+path works end to end from a real browser into the real store.
 
 **Dependencies:** milestone 2 (a real store to land samples in for manual
 verification) — complete.
@@ -483,11 +536,13 @@ to it, so each milestone is safely shippable without dark-launch flags.
    `localhost` avoids Node resolving `localhost` to `::1` and missing the
    IPv4-only published compose port.
 3. **`make test` composition details** — whether it includes `npm run typecheck`
-   alongside lint. Decide when elaborating milestone 4. The contract-test half
-   is settled by decision #1: contract tests never run under the default
-   unit-test entry point; milestone 4 may add a thin `make test-contract`
-   wrapper over `compose:up`/`test:contract`/`compose:down`, but `make test`
-   stays docker-free.
+   alongside lint. Decide when elaborating milestone 4 (note: typecheck is
+   genuinely green from milestone 3 step 1 onward, so including it is now
+   viable). The contract-test half is settled by decision #1: contract tests
+   never run under the default unit-test entry point; milestone 4 may add a
+   thin `make test-contract` wrapper over
+   `compose:up`/`test:contract`/`compose:down`, but `make test` stays
+   docker-free.
 4. **INGEST_PORT value and env plumbing** through compose/site container.
    Partially constrained by milestone 2: compose sets `PORT=9091` on the
    `metrics-ingest` service and publishes `127.0.0.1:9091:9091`; milestone 4
@@ -506,6 +561,28 @@ rule).
 
 ## Plan changelog
 
-(empty — no replans; milestone 2 marked complete and milestone 3 elaborated on
-2026-08-22, resolving Open decision #2 and recording the VictoriaMetrics
-`latency_offset` finding from milestone 2 execution)
+- **2026-08-22 — revision 2 (replan after `DIVERGENCE` in milestone 3, step 1).**
+  What changed: milestone 3 gained a new **step 1 (refactor)** repairing a
+  pre-existing baseline defect, and the former steps 1–3 were renumbered 2–4.
+  Why: the milestone's gate (`npm run lint && npm run typecheck &&
+  npm run build` all green) assumed a green baseline, but `npm run typecheck`
+  was already failing on the clean pre-feature tree (verified via git stash)
+  with 8 TS2339 errors in `src/lib/app-params.js` — a `Map` localStorage
+  stand-in lacking `setItem`/`getItem`/`removeItem` on the
+  `Storage | Map<any, any>` union (5 errors) and untyped `import.meta.env`
+  because jsconfig sets `"types": []` (3 errors). Decision: fix the baseline
+  rather than weaken the gate — both fixes are strictly type-only (a JSDoc
+  `/** @type {Storage} */` cast on the storage fallback, whose Map arm is dead
+  at runtime for those calls, plus `"types": ["vite/client"]` in
+  `jsconfig.json`), so a genuinely green typecheck gate is cheap and the
+  lint+typecheck+build gate stays intact for all milestone-3 code steps and
+  beyond (also noted in Open decision #3 for milestone 4's `make test`).
+  Step 2 (the beacon reporter, formerly step 1) is otherwise complete and
+  sitting uncommitted in the working tree; its text was updated to record the
+  actually installed `web-vitals` 6.1.1 and its full `navigationType` union
+  (adding `soft-navigation`, covered by the existing drop rule), and the step
+  now instructs the executor to validate the existing work against the
+  repaired gate and commit it. Steps 3 (vite proxy) and 4 (manual end-to-end
+  verification) are unchanged apart from renumbering. Codebase findings gained
+  the baseline-defect entry and the corrected web-vitals version. Milestones
+  4–5 are unchanged. Milestone 3's intent approval must be reset.
