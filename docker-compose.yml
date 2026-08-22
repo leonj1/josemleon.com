@@ -3,7 +3,9 @@ services:
     image: victoriametrics/victoria-metrics
     command: ["-retentionPeriod=12"]
     ports:
-      - "127.0.0.1:8428:8428"
+      # LAN-accessible so vmui can be viewed from other machines; the query API
+      # has no auth, so do not port-forward 8428 beyond the local network.
+      - "8428:8428"
     volumes:
       - vm-data:/victoria-metrics-data
 

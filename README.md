@@ -53,7 +53,7 @@ unit-test and contract-test workflow, see
 | Target | What it does |
 |--------|--------------|
 | `make build` | `docker compose build` |
-| `make start` | `docker compose up -d` — site on `http://localhost:8099`, metrics-ingest on `127.0.0.1:9091` (localhost-only), VictoriaMetrics on `127.0.0.1:8428` (localhost-only) |
+| `make start` | `docker compose up -d` — site on `http://localhost:8099`, metrics-ingest on `127.0.0.1:9091` (localhost-only), VictoriaMetrics on port `8428` (LAN-accessible; the query API has no auth, so never forward 8428 beyond the local network) |
 | `make stop` | `docker compose down` — it never passes `-v`, so metrics data is kept |
 | `make restart` | stop then start — data survives (see retention below) |
 | `make test` | ingest build + unit tests plus site lint + typecheck; no docker needed |
@@ -76,7 +76,8 @@ interaction.
 
 ### Viewing in vmui
 
-With the stack up, open `http://localhost:8428/vmui` and query any series.
+With the stack up, open `http://localhost:8428/vmui` (or `http://<server-lan-ip>:8428/vmui`
+from another machine on the network) and query any series.
 Example PromQL — p75 LCP per page over the last 7 days:
 
 ```
