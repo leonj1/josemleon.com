@@ -3,6 +3,8 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
 COPY . .
+ARG ENABLE_METRICS=0
+ENV VITE_ENABLE_METRICS=$ENABLE_METRICS
 RUN npm run build
 
 FROM nginx:1.27-alpine

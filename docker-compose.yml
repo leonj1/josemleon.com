@@ -23,6 +23,8 @@ services:
   site:
     build:
       context: .
+      args:
+        ENABLE_METRICS: "1"
     depends_on:
       - metrics-ingest
     environment:

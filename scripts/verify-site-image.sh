@@ -1,7 +1,8 @@
 #!/bin/sh
 set -eu
 
-IMAGE="site-image-verify:$$"
+PLAIN_IMAGE="site-image-verify:plain-$$"
+METRICS_IMAGE="site-image-verify:metrics-$$"
 PLAIN_CONTAINER="site-verify-plain-$$"
 MISSING_CONTAINER="site-verify-missing-$$"
 PROXY_CONTAINER="site-verify-proxy-$$"
@@ -10,7 +11,7 @@ MISSING_STDERR="${TMPDIR:-/tmp}/site-verify-missing-$$.stderr"
 cleanup() {
     docker rm -f "$PLAIN_CONTAINER" "$MISSING_CONTAINER" "$PROXY_CONTAINER" >/dev/null 2>&1 || true
     rm -f "$MISSING_STDERR"
-    docker rmi "$IMAGE" >/dev/null 2>&1 || true
+    docker rmi "$PLAIN_IMAGE" "$METRICS_IMAGE" >/dev/null 2>&1 || true
 }
 trap cleanup EXIT HUP INT TERM
 
@@ -19,9 +20,10 @@ fail() {
     exit 1
 }
 
-docker build -t "$IMAGE" .
+docker build -t "$PLAIN_IMAGE" .
+docker build --build-arg ENABLE_METRICS=1 -t "$METRICS_IMAGE" .
 
-docker run -d --name "$PLAIN_CONTAINER" "$IMAGE" >/dev/null
+docker run -d --name "$PLAIN_CONTAINER" "$PLAIN_IMAGE" >/dev/null
 
 ready=0
 i=0
@@ -43,14 +45,14 @@ metrics_response=$(docker exec "$PLAIN_CONTAINER" sh -c 'wget -S --post-data="{}
 echo "$metrics_response" | grep -Eq 'HTTP/[0-9.]+ (404|405)' || fail "plain POST /metrics was not rejected as a local route"
 echo "$metrics_response" | grep -q 'HTTP/[0-9.]+ 502' && fail "plain POST /metrics was proxied"
 
-if docker run --name "$MISSING_CONTAINER" -e METRICS_PROXY=1 "$IMAGE" 2>"$MISSING_STDERR"; then
+if docker run --name "$MISSING_CONTAINER" -e METRICS_PROXY=1 "$PLAIN_IMAGE" 2>"$MISSING_STDERR"; then
     fail "missing INGEST_PORT container unexpectedly started"
 fi
 grep -q 'INGEST_PORT is required' "$MISSING_STDERR" || fail "missing INGEST_PORT error was not reported"
 
 docker run -d --name "$PROXY_CONTAINER" \
     --add-host metrics-ingest:127.0.0.1 \
-    -e METRICS_PROXY=1 -e INGEST_PORT=9091 "$IMAGE" >/dev/null
+    -e METRICS_PROXY=1 -e INGEST_PORT=9091 "$PLAIN_IMAGE" >/dev/null
 proxy_config=''
 i=0
 while [ "$i" -lt 30 ]; do
@@ -62,5 +64,18 @@ while [ "$i" -lt 30 ]; do
 done
 [ "$(docker inspect -f '{{.State.Running}}' "$PROXY_CONTAINER")" = true ] || fail "proxy container did not stay up"
 echo "$proxy_config" | grep -q 'proxy_pass http://metrics-ingest:9091/metrics' || fail "proxy config was not rendered correctly"
+
+# Bundle assertions: the default build must contain no web-vitals code, the
+# metrics-enabled build must contain it. Markers are string literals that
+# survive minification.
+docker run --rm "$PLAIN_IMAGE" sh -c 'ls /usr/share/nginx/html/assets/*.js >/dev/null' \
+    || fail "no JS assets found to assert against"
+for marker in 'largest-contentful-paint' 'back-forward-cache'; do
+    if docker run --rm "$PLAIN_IMAGE" grep -rq "$marker" /usr/share/nginx/html/assets; then
+        fail "default bundle contains $marker"
+    fi
+    docker run --rm "$METRICS_IMAGE" grep -rq "$marker" /usr/share/nginx/html/assets \
+        || fail "metrics bundle missing $marker"
+done
 
 echo "verify-site-image: passed"
