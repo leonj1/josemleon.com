@@ -164,13 +164,16 @@ complete.
 
 ## Open decisions
 
-- **Dev-server reporting** (decide at M2): should `npm run dev` keep beaconing
+- **Dev-server reporting** (decide at M2 — **DECIDED at M2: keep on via
+  `import.meta.env.DEV || import.meta.env.VITE_ENABLE_METRICS === '1'` in
+  src/main.jsx**): should `npm run dev` keep beaconing
   vitals through the existing Vite proxy? Recommended: yes — gate on
   `import.meta.env.DEV || import.meta.env.VITE_ENABLE_METRICS === '1'` so
   current dev behavior is preserved with zero config (`DEV` is statically
   `false` in production builds, so tree-shaking is unaffected). Alternative:
   require `VITE_ENABLE_METRICS=1` in `.env.local`, making dev opt-in.
-- **Flag value convention** (decide at M2): `'1'` vs `'true'` for both flags;
+- **Flag value convention** (decide at M2 — **DECIDED at M2: `'1'`**): `'1'`
+  vs `'true'` for both flags;
   recommended `'1'` to match the current compose style (`INGEST_PORT: "9091"`
   string-number idiom).
 - **Railway config file** (decide at M3, likely "no"): whether to add a
@@ -190,4 +193,20 @@ complete.
 
 ## Plan changelog
 
-*(empty)*
+- **Rev 1 → 2 (M1 execution):** ExecutePlan's completion phase ran security/performance
+  specialist reviews that went out of scope — they generated findings against
+  `metrics-ingest/` (explicitly out of scope) and codex started implementing
+  them (unbounded body size, VM write queues, deadlines), stalling the run.
+  The orchestrator reverted all `metrics-ingest/` changes, deleted the transient
+  FIXES.md/NOTES.md artifacts, and completed step 4 (Makefile `test-image`
+  target) directly. The docs update landed M3's README rewrite early; content
+  verified accurate and kept. M1's verify gate then flagged the branch as
+  unshippable (milestone files untracked); committed as d2bbf9d (CHORE) and
+  6dd956e (FEAT), re-verified PASS. The security/perf findings themselves are
+  recorded for the user but deliberately not implemented (out of scope).
+- **Rev 2 → 3 (M2 execution):** Milestone 2 was implemented directly by the
+  orchestrator rather than via ExecutePlan — the tool's completion phase had
+  demonstrated out-of-scope review-driven changes and a stall in M1, so the
+  four M2 steps were executed by hand with the same gates (intent check,
+  verify). M2 verified by the gate as content-sound (replan only for
+  uncommitted files, same as M1); committed and re-verified PASS.
