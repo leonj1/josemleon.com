@@ -37,13 +37,25 @@ Findings:
   (no vitest/jest), so the ingest service should not inherit one.
 - No `docs/` folder, no PROJECT.md, no docker-compose.yml. `PLAN.md` at root is
   the feature spec, not project context.
-- No `metrics-ingest/` directory exists yet; it is green-field.
+- Milestone 1 outcome (verified): `metrics-ingest/` exists with 37 green tests;
+  `MetricsStore` interface is
+  `write(lines: ImportLine[]): Promise<Result<void, StoreError>>` with
+  `StoreError = { kind: "write-failed"; message: string }`; `IngestConfig`
+  carries a typed `vmImportUrl: URL` and branded `Port`; `main.ts` wires
+  StubMetricsStore → MetricsService → IngestRoute; the `npm test` glob is the
+  **flat** pattern `tests/*.test.ts`, so files in `tests/contract/` are
+  naturally excluded from the default unit-test run; the Dockerfile runtime
+  stage copies only `package.json` + `dist/` and runs `node dist/main.js` as
+  `USER node`. Global `fetch` is available (Node 22).
 
 Build/test commands the executor should run:
 
 - **Ingest service** (from `/home/jose/src/josemleon.com/metrics-ingest`):
   - Build: `npm run build` (script: `tsc`)
   - Test: `npm test` (script: `node --import tsx --test "tests/*.test.ts"`)
+  - Contract tests (from milestone 2): `npm run compose:up`,
+    `npm run test:contract`, `npm run compose:down` (see Open decisions, #1 —
+    resolved).
   - Test runner decision: **Node 22 built-in `node:test` + `tsx` loader**,
     devDependencies only `typescript`, `tsx`, `@types/node`. Chosen because the
     repo has no existing test framework, this keeps dependencies minimal, and
@@ -58,8 +70,8 @@ Build/test commands the executor should run:
 
 Assumptions:
 
-- Node 22 and Docker are available on the dev host (Dockerfile already targets
-  node:22-alpine; PLAN.md specifies Node 22).
+- Node 22, Docker, and docker compose are available on the dev host (Dockerfile
+  already targets node:22-alpine; PLAN.md specifies Node 22).
 - No spike milestone is needed: every technology involved (node:http,
   VictoriaMetrics import API, web-vitals, nginx proxy, compose) has
   well-understood behavior; the dominant risk is boundary correctness (exact
@@ -71,17 +83,27 @@ Assumptions:
   config with no defaults, Fakes only under `tests/`.
 - Commit prefixes: `FEAT:` for behavior steps, `CHORE:` for scaffolding/refactor
   steps that change no behavior.
-- Milestone 1 wires `main.ts` to a temporary `StubMetricsStore` (accepts writes,
+- Milestone 1 wired `main.ts` to a temporary `StubMetricsStore` (accepts writes,
   returns ok, stores nothing) because `VictoriaMetricsStore` is deliberately
   milestone 2 per PLAN.md. VictoriaMetrics is an external dependency, so
   stubbing it in the walking skeleton is allowed (core rule 2); the stub is
   tracked in the ledger with its removal step. Config (`VM_IMPORT_URL`, `PORT`)
   is still required at startup in milestone 1 so the config contract never
   changes later.
+- The `victoriametrics/victoria-metrics` image is scratch-based (no shell), so
+  compose exec-form healthchecks cannot run inside it; readiness is instead
+  polled over HTTP (`GET /health` on 8428) by the contract test itself.
+- Unit-test choice for `VictoriaMetricsStore` (decided at elaboration): its HTTP
+  behavior is unit-tested against a **locally spawned `node:http` server inside
+  the test process** — a real socket boundary listener, not a mock framework —
+  asserting the exact serialized request; the contract test then proves the real
+  VictoriaMetrics accepts that request. Chosen over "defer entirely to the
+  contract test" so that non-2xx and connection-refused → `err(StoreError)`
+  paths are pinned by fast tests that need no docker.
 
 ## Milestone list
 
-### Milestone 1 — Ingest walking skeleton (NEXT — fully elaborated)
+### Milestone 1 — Ingest walking skeleton (COMPLETE — verified)
 
 **Goal:** A real, dockerized `metrics-ingest` service whose full internal path
 (IngestRoute → MetricsService → MetricsStore interface) accepts Web Vitals
@@ -95,9 +117,7 @@ one-write-per-beacon cardinality, and startup that fails clearly without
 `POST /metrics` with 204/400/502 semantics; starting it without either env var
 exits non-zero with a clear message naming the missing variable.
 
-**Steps** (execute in order; each leaves the ingest project compiling and all
-its tests green; run `npm run build && npm test` in
-`/home/jose/src/josemleon.com/metrics-ingest` at the end of every step):
+**Steps** (all executed and verified; retained for the record):
 
 1. (behavior) Create `/home/jose/src/josemleon.com/metrics-ingest/` with
    `package.json` (`"type": "module"`, scripts `build: "tsc"`,
@@ -177,21 +197,106 @@ tests; the Route → Service → Store layering, Result-type error flow, require
 startup contract, and Docker packaging all proven before any external system is
 involved.
 
-### Milestone 2 — VictoriaMetrics integration
+### Milestone 2 — VictoriaMetrics integration (NEXT — fully elaborated)
 
-- **Goal:** Replace the stub with a real `VictoriaMetricsStore` and prove the
-  real boundary with a contract test against a VictoriaMetrics container.
-- **Working state at the end:** `docker compose up` (compose file with
-  `metrics-ingest` + `victoriametrics`, named volume, `127.0.0.1:8428:8428`,
-  `-retentionPeriod=12`) lets a curl'd beacon to the ingest service appear in
-  `GET /api/v1/query?query=web_vitals_lcp_ms` with correct labels; the contract
-  test automates exactly that; `StubMetricsStore` is deleted; unit tests still
-  green and still Fake-based.
-- **Risks retired:** the VictoriaMetrics import API accepts our exact exposition
-  lines; compose networking, volume persistence, and 502-on-store-failure
-  behavior against a real down/up VM.
-- **Dependencies:** milestone 1 (MetricsStore interface, Dockerfile, exact line
-  format).
+**Goal:** Replace the stub with a real `VictoriaMetricsStore` and prove the real
+boundary with a contract test against a VictoriaMetrics container run via a new
+root docker-compose.yml.
+
+**Working state at the end:** `docker compose up -d --build` at the repo root
+starts `metrics-ingest` (localhost:9091) + `victoriametrics` (localhost:8428,
+`-retentionPeriod=12`, named volume); a curl'd beacon to
+`http://127.0.0.1:9091/metrics` returns 204 and the sample appears in
+`GET http://127.0.0.1:8428/api/v1/query?query=web_vitals_lcp_ms` with correct
+labels; with the VM container stopped the same beacon returns 502;
+`npm run compose:up && npm run test:contract` automates the happy path;
+`src/clients/StubMetricsStore.ts` is deleted; `npm run build && npm test`
+(unit, Fake-based, no docker needed) still green and still excludes the
+contract test.
+
+**Steps** (execute in order; each leaves the ingest project compiling and all
+its unit tests green; run `npm run build && npm test` in
+`/home/jose/src/josemleon.com/metrics-ingest` at the end of every step):
+
+1. (behavior) Add
+   `/home/jose/src/josemleon.com/metrics-ingest/src/clients/VictoriaMetricsStore.ts`
+   implementing the existing `MetricsStore` interface: constructor takes
+   `importUrl: URL` (constructor injection — only `main.ts` will instantiate
+   it); `write(lines)` POSTs the lines joined by `\n` with one trailing `\n` as
+   the body to `importUrl` using global `fetch` with header
+   `Content-Type: text/plain`, returns `ok(undefined)` on any 2xx response,
+   `err({ kind: "write-failed", message })` with the status code in the message
+   on any non-2xx, and wraps the fetch call so a network failure (the one
+   legitimate boundary try/catch) also returns
+   `err({ kind: "write-failed", ... })` — the method never throws; add
+   `tests/VictoriaMetricsStore.test.ts` that starts a real `node:http` server on
+   an ephemeral port inside the test process (a real socket boundary listener —
+   permitted; no mocking frameworks) and asserts: the store sends exactly one
+   POST to exactly the path of the configured URL; the exact received body
+   `web_vitals_lcp_ms{path="/projects",rating="good",nav_type="navigate"} 2412.5\n`
+   for one line and the exact newline-joined body for two lines; the
+   `Content-Type: text/plain` header; `ok` when the server answers 204; `err`
+   with a message containing `500` when it answers 500; and `err` (not a throw)
+   when writing to a port whose server has been closed (connection refused).
+2. (behavior) In
+   `/home/jose/src/josemleon.com/metrics-ingest/src/main.ts` replace
+   `new StubMetricsStore()` with
+   `new VictoriaMetricsStore(config.value.vmImportUrl)` (import from
+   `./clients/VictoriaMetricsStore.js`), then **delete
+   `src/clients/StubMetricsStore.ts`** and grep the project to confirm zero
+   remaining references; `tests/Startup.test.ts` must still pass unchanged
+   (`GET /healthz` never touches the store, so a dead `VM_IMPORT_URL` is fine);
+   finish with `npm run build && npm test` green — this closes the ledger's
+   StubMetricsStore row.
+3. (behavior) Create `/home/jose/src/josemleon.com/docker-compose.yml` (repo
+   root) with exactly two services on the default network, no `container_name`
+   overrides, written so milestone 4 can add a `site` service without
+   restructuring: `victoriametrics` (image `victoriametrics/victoria-metrics`,
+   `command: ["-retentionPeriod=12"]`, `ports: ["127.0.0.1:8428:8428"]`, named
+   volume `vm-data` mounted at `/victoria-metrics-data`, top-level
+   `volumes: vm-data:`) and `metrics-ingest` (build context `./metrics-ingest`,
+   `depends_on: [victoriametrics]`, environment
+   `VM_IMPORT_URL=http://victoriametrics:8428/api/v1/import/prometheus` and
+   `PORT=9091`, `ports: ["127.0.0.1:9091:9091"]` — localhost-only, needed by the
+   contract test and operator); this step's test is the smoke sequence, run it
+   in full: `docker compose up -d --build`; POST
+   `{"name":"LCP","value":2412.5,"rating":"good","path":"/projects","navType":"navigate"}`
+   to `http://127.0.0.1:9091/metrics` → expect 204; curl
+   `http://127.0.0.1:8428/api/v1/query?query=web_vitals_lcp_ms` → expect the
+   sample with labels `path="/projects"`, `rating="good"`,
+   `nav_type="navigate"`; `docker compose stop victoriametrics` then repeat the
+   beacon POST → expect 502 (real down-VM store failure surfaces through the
+   route); `docker compose start victoriametrics`; `docker compose down`; then
+   confirm `npm run build && npm test` still green (untouched by this step).
+4. (behavior) Add the automated contract test and its invocation scripts: in
+   `metrics-ingest/package.json` add scripts
+   `"compose:up": "docker compose -f ../docker-compose.yml up -d --build"`,
+   `"compose:down": "docker compose -f ../docker-compose.yml down"`, and
+   `"test:contract": "node --import tsx --test \"tests/contract/*.test.ts\""`
+   (the `tests/contract/` subdirectory is outside the default `tests/*.test.ts`
+   glob, so `npm test` never runs it); add
+   `tests/contract/VictoriaMetricsStore.contract.test.ts` which (a) polls
+   `http://127.0.0.1:8428/health` and `http://127.0.0.1:9091/healthz` with a
+   bounded deadline (~30s, failing with a message telling the user to run
+   `npm run compose:up`), (b) POSTs a beacon whose `path` is unique per run
+   (e.g. `/contract-<epoch-ms>`, name `LCP`, value `2412.5`, rating `good`,
+   navType `navigate`) to `http://127.0.0.1:9091/metrics` and asserts 204,
+   (c) polls `http://127.0.0.1:8428/api/v1/query` with the URL-encoded query
+   `web_vitals_lcp_ms{path="/contract-<epoch-ms>"}` (bounded deadline ~30s)
+   until the result vector is non-empty, then asserts the exact labels
+   `path`, `rating="good"`, `nav_type="navigate"` and sample value `2412.5`;
+   add a short `metrics-ingest/README.md` documenting the workflow
+   (`npm run compose:up && npm run test:contract`, then `npm run compose:down`;
+   unit tests via `npm test` need no docker); verify by running that full
+   sequence green, and confirm `npm run build && npm test` alone is still green
+   and still excludes the contract test.
+
+**Risks retired:** the real VictoriaMetrics accepts our exact exposition lines
+and the sample round-trips through `/api/v1/query` with correct labels; compose
+networking (service-name DNS), named-volume mount, and localhost-only port
+publishing work; the non-2xx and connection-refused → `err(StoreError)` paths
+are pinned at the socket level (step 1) and the end-to-end 502-with-VM-down
+behavior is proven against the real stopped container (step 3).
 
 ### Milestone 3 — Frontend beacon
 
@@ -211,8 +316,9 @@ involved.
 
 - **Goal:** One-command production topology: site + ingest + VM under compose,
   driven by the Makefile.
-- **Working state at the end:** root `docker-compose.yml` with `site`,
-  `metrics-ingest`, `victoriametrics`; `nginx.conf.template` gains
+- **Working state at the end:** root `docker-compose.yml` gains the `site`
+  service alongside the existing `metrics-ingest` + `victoriametrics`;
+  `nginx.conf.template` gains
   `location = /metrics { proxy_pass http://metrics-ingest:$INGEST_PORT/metrics; }`
   and the Dockerfile envsubst list gains `$INGEST_PORT`; Makefile
   `build/start/stop/restart` repointed at compose and `make test` runs ingest
@@ -239,24 +345,41 @@ involved.
 
 | Item | Introduced | Removed |
 |------|------------|---------|
-| `metrics-ingest/src/clients/StubMetricsStore.ts` (production stub for the external VictoriaMetrics boundary; accepts writes, returns ok) | Milestone 1, step 7 | Milestone 2 — the step that lands `VictoriaMetricsStore` swaps it in `main.ts` and deletes the stub file |
+| `metrics-ingest/src/clients/StubMetricsStore.ts` (production stub for the external VictoriaMetrics boundary; accepts writes, returns ok) | Milestone 1, step 7 | **Milestone 2, step 2** — `main.ts` swaps in `VictoriaMetricsStore(config.vmImportUrl)` and the stub file is deleted in the same step |
 
 No feature flags planned: the beacon endpoint is inert until the frontend sends
 to it, so each milestone is safely shippable without dark-launch flags.
 
 ## Open decisions
 
-1. **Contract-test invocation mechanism** — how the milestone 2 contract test
-   obtains a real VictoriaMetrics (compose up in a Make/npm target vs. spawning
-   the container from the test). Decide when elaborating milestone 2.
+1. **Contract-test invocation mechanism** — **RESOLVED (milestone 2
+   elaboration).** The contract test does **not** manage containers; compose
+   lifecycle lives in npm scripts. `npm run compose:up`
+   (`docker compose -f ../docker-compose.yml up -d --build`) and
+   `npm run compose:down` provide/tear down the real VM + ingest;
+   `npm run test:contract` runs only `tests/contract/*.test.ts` (a subdirectory
+   deliberately outside the default `tests/*.test.ts` glob, so `npm test` never
+   touches docker). Rationale: (a) the test stays a plain HTTP client — no
+   docker-CLI coupling inside test code, and it can be re-run in seconds
+   against an already-running stack while iterating; (b) readiness is handled
+   once, by bounded HTTP polling of `/health` (VM) and `/healthz` (ingest)
+   inside the test — necessary anyway because the scratch-based VM image cannot
+   run exec-form compose healthchecks; (c) milestone 4's Make targets can reuse
+   the same compose file and scripts without restructuring. The test fails with
+   a clear "run `npm run compose:up`" message when the stack is absent.
 2. **Vite dev proxy target** — hardcoded `http://localhost:<port>` vs. env-driven
    target for the `/metrics` proxy. Decide when elaborating milestone 3.
 3. **`make test` composition details** — whether it includes `npm run typecheck`
-   alongside lint, and whether contract tests run under `make test` or a
-   separate target. Decide when elaborating milestone 4 (contract-test half may
-   be settled at milestone 2).
-4. **INGEST_PORT value and env plumbing** through compose/site container. Decide
-   when elaborating milestone 4.
+   alongside lint. Decide when elaborating milestone 4. The contract-test half
+   is now settled by decision #1: contract tests never run under the default
+   unit-test entry point; milestone 4 may add a thin `make test-contract`
+   wrapper over `compose:up`/`test:contract`/`compose:down`, but `make test`
+   stays docker-free.
+4. **INGEST_PORT value and env plumbing** through compose/site container.
+   Partially constrained by milestone 2: compose sets `PORT=9091` on the
+   `metrics-ingest` service and publishes `127.0.0.1:9091:9091`; milestone 4
+   decides how `$INGEST_PORT` reaches the site container's nginx template
+   (expected value 9091).
 
 ## Out of scope
 

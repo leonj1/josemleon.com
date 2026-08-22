@@ -4,9 +4,9 @@
   "feature": "Self-hosted Web Vitals metrics pipeline per PLAN.md: SPA beacon -> nginx -> metrics-ingest -> VictoriaMetrics, queryable in vmui and the Prometheus HTTP API, persisting across make restart, with unit + contract tests and make build/test/start/stop/restart working.",
   "planPath": ".smarter-coder/plan.md",
   "planRevision": 1,
-  "currentMilestone": 1,
+  "currentMilestone": 2,
   "milestones": {
-    "1": { "intentChecked": true, "verified": false, "approvedRevision": 1 },
+    "1": { "intentChecked": true, "verified": true, "approvedRevision": 1 },
     "2": { "intentChecked": false, "verified": false, "approvedRevision": 0 },
     "3": { "intentChecked": false, "verified": false, "approvedRevision": 0 },
     "4": { "intentChecked": false, "verified": false, "approvedRevision": 0 },
