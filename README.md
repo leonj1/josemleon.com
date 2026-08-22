@@ -109,5 +109,7 @@ survives `make restart` and `make stop`/`make start`. `make stop` never passes
 Docker compose via the Makefile is the only supported way to run the site
 image. Standalone `docker run` of the site image is not supported: the image
 requires `INGEST_PORT` (it exits with a clear error when unset) and a network
-where the hostname `metrics-ingest` resolves. `docker build` on its own still
-works.
+where the ingest service's hostname resolves. `INGEST_HOST` defaults to
+`metrics-ingest` (the compose network name); on Railway it must be set to the
+ingest service's private-network domain, e.g. `metrics-ingest.railway.internal`.
+`docker build` on its own still works.
