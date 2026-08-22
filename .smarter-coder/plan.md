@@ -90,6 +90,28 @@ Findings:
   `vite.config.js` `server.proxy` forwards `/metrics` to
   `http://127.0.0.1:9091`; verified end-to-end with real browser samples
   landing in VM through the dev proxy; site lint/typecheck/build all green.
+- Milestone 4 outcome (verified): the compose stack is the sole supported
+  runtime — `site` service (root Dockerfile, `8099:80`, `INGEST_PORT=9091`)
+  alongside `metrics-ingest` + `victoriametrics`; `nginx.conf.template`
+  proxies `location = /metrics` to `http://metrics-ingest:${INGEST_PORT}/metrics`
+  and the Dockerfile CMD guards `INGEST_PORT` with `:?` (fails clearly when
+  unset) and envsubsts `'$PORT $INGEST_PORT'`; Makefile targets
+  `build/start/stop/restart/test/test-contract` all work (`stop` never passes
+  `-v`; `vm-data` survived a verified `make restart` with a pre-restart sample
+  still queryable); headless-Chrome page loads of `http://localhost:8099/` and
+  `/projects` produced real LCP/FCP/TTFB/CLS samples through the production
+  path (INP absent as expected without interaction). Accepted consequence
+  (documented, not "fixed"): standalone `docker run` of the site image is no
+  longer a supported runtime path — the image requires `INGEST_PORT` and a
+  network where the hostname `metrics-ingest` resolves; `docker build` alone
+  still works.
+- Root `README.md` (read at milestone 5 elaboration): pure Base44 boilerplate —
+  clone/install/`.env.local`/`npm run dev`/publish instructions, bold-line
+  pseudo-headings, no mention of Docker, Make, or metrics. The metrics section
+  is an append (new `##` section after the existing content), not a rewrite of
+  the boilerplate. `metrics-ingest/README.md` (milestone 2, step 4) already
+  documents the unit-test and contract-test npm workflow — the root section
+  links to it instead of duplicating it.
 - **VictoriaMetrics instant-query gotcha (learned in milestone 2 execution):**
   VM's default `-search.latencyOffset` is **30s**, so `/api/v1/query` silently
   hides samples younger than 30 seconds. The contract test appends
@@ -154,7 +176,8 @@ Assumptions:
   (kebab-case `src/lib/` module, small verb-named functions, no test framework);
   the size limits (functions < 30 lines, ≤ 2 indent levels) still apply.
 - Commit prefixes: `FEAT:` for behavior steps, `CHORE:` for scaffolding/refactor
-  steps that change no behavior, `BUG:` for defect repairs (milestone 3 step 1).
+  steps that change no behavior (including docs-only steps, milestone 5),
+  `BUG:` for defect repairs (milestone 3 step 1).
 - The `victoriametrics/victoria-metrics` image is scratch-based (no shell), so
   compose exec-form healthchecks cannot run inside it; readiness is instead
   polled over HTTP (`GET /health` on 8428) by the contract test itself.
@@ -466,32 +489,34 @@ path works end to end from a real browser into the real store.
 **Dependencies:** milestone 2 (a real store to land samples in for manual
 verification) — complete.
 
-### Milestone 4 — Production wiring (NEXT — fully elaborated)
+### Milestone 4 — Production wiring (COMPLETE — verified)
 
 **Goal:** One-command production topology: site + ingest + VM under compose,
 driven by the Makefile.
 
-**Working state at the end:** root `docker-compose.yml` has the `site` service
-(existing root Dockerfile, published on `8099:80` exactly as today's Makefile
-publishes, `INGEST_PORT=9091` in its environment) alongside `metrics-ingest` +
-`victoriametrics`; `nginx.conf.template` proxies `location = /metrics` to
-`http://metrics-ingest:${INGEST_PORT}/metrics` and the Dockerfile envsubst list
-is `'$PORT $INGEST_PORT'` with a fail-clearly guard when `INGEST_PORT` is
-unset; Makefile `build/start/stop/restart` drive compose (named volume
-`vm-data` survives `make restart`), `make test` runs ingest build + 44 unit
-tests + site lint + typecheck with no docker, and `make test-contract` wraps
-the compose contract-test workflow; `make start`, load `http://localhost:8099`
-pages (headless Chrome), and the Web Vitals series are queryable via
+**Working state at the end (reached and verified):** root `docker-compose.yml`
+has the `site` service (existing root Dockerfile, published on `8099:80` exactly
+as today's Makefile publishes, `INGEST_PORT=9091` in its environment) alongside
+`metrics-ingest` + `victoriametrics`; `nginx.conf.template` proxies
+`location = /metrics` to `http://metrics-ingest:${INGEST_PORT}/metrics` and the
+Dockerfile envsubst list is `'$PORT $INGEST_PORT'` with a fail-clearly guard
+when `INGEST_PORT` is unset; Makefile `build/start/stop/restart` drive compose
+(named volume `vm-data` survives `make restart`), `make test` runs ingest build
++ 44 unit tests + site lint + typecheck with no docker, and `make test-contract`
+wraps the compose contract-test workflow; `make start`, load
+`http://localhost:8099` pages (headless Chrome), and the Web Vitals series are
+queryable via
 `curl 'http://127.0.0.1:8428/api/v1/query?query=web_vitals_lcp_ms&latency_offset=1s'`
 (the `latency_offset=1s` parameter is required on all verification curls —
 VM's default 30s `-search.latencyOffset` otherwise hides fresh samples; see
 Codebase findings) and in vmui; a beacon written before `make restart` is still
 queryable after it.
 
-**Steps** (execute in order from `/home/jose/src/josemleon.com`; every step
-ends with `cd metrics-ingest && npm run build && npm test` (44 tests) and
+**Steps** (all executed and verified; retained for the record; executed in
+order from `/home/jose/src/josemleon.com`; every step ended with
+`cd metrics-ingest && npm run build && npm test` (44 tests) and
 `npm run lint && npm run typecheck && npm run build` at the repo root all
-green; this milestone never touches `metrics-ingest/src` or the SPA source):
+green; this milestone never touched `metrics-ingest/src` or the SPA source):
 
 1. (behavior) Run the site under compose and repoint the Makefile run targets.
    In `/home/jose/src/josemleon.com/docker-compose.yml` add a third service
@@ -609,16 +634,98 @@ VM data demonstrably survives `make restart` via the named volume.
 
 **Dependencies:** milestones 2 and 3 — both complete.
 
-### Milestone 5 — Docs
+### Milestone 5 — Docs (NEXT — fully elaborated)
 
-- **Goal:** Operator documentation in README.
-- **Working state at the end:** README section covering vmui access, example
-  PromQL (p75 LCP per path via
-  `quantile_over_time(0.75, web_vitals_lcp_ms[7d])`), example query-API curl
-  (including the `latency_offset=1s` note for fresh samples), retention/volume
-  notes; no code changes; all Make targets still green.
-- **Risks retired:** none (knowledge capture).
-- **Dependencies:** milestone 4.
+**Goal:** Operator documentation in the root README: how to run, query, and
+maintain the metrics pipeline — docs-only, zero code changes.
+
+**Working state at the end:** `/home/jose/src/josemleon.com/README.md` contains
+a "Performance metrics" section documenting: the Make targets
+(`build/start/stop/restart/test/test-contract`); the five metric series and
+their labels; vmui at `http://localhost:8428/vmui`; the example PromQL
+`quantile_over_time(0.75, web_vitals_lcp_ms[7d])` (p75 LCP per path); an
+example `/api/v1/query` curl including the `latency_offset=1s` note for fresh
+samples; retention/volume notes (12 months, named volume `vm-data`, survives
+`make restart`, `make stop` never passes `-v`); that `make test-contract`
+leaves the stack up on failure (tear down with `make stop`); and that
+standalone `docker run` of the site image is not a supported runtime path.
+The section links to `metrics-ingest/README.md` rather than duplicating it.
+`make test` is green, site `npm run build` is green, and the milestone's only
+changed file is `README.md`.
+
+**Steps** (execute in order from `/home/jose/src/josemleon.com`; this milestone
+must not modify any file other than `/home/jose/src/josemleon.com/README.md` —
+no source, config, compose, Makefile, nginx, or `metrics-ingest/` changes, and
+do not touch `PLAN.md`):
+
+1. (behavior — docs only, no code, no tests to add) Append a new
+   `## Performance metrics (self-hosted Web Vitals)` section to
+   `/home/jose/src/josemleon.com/README.md`, after the existing Base44
+   boilerplate (leave that content untouched). Write it in normal Markdown
+   (`##`/`###` headings, fenced code blocks) and cover exactly the following,
+   in this order:
+   - **Overview** (2–3 sentences): the SPA reports Core Web Vitals with one
+     beacon per metric to `POST /metrics`; in production nginx proxies it to
+     the `metrics-ingest` service, which writes Prometheus exposition lines to
+     VictoriaMetrics; everything is self-hosted under docker compose (no
+     third-party calls). Link to `metrics-ingest/README.md` for the service's
+     own unit-test and contract-test workflow — do not duplicate its content.
+   - **Running the stack — Make targets** (definition list or table):
+     `make build` = `docker compose build`; `make start` = `docker compose up
+     -d` — site on `http://localhost:8099`, metrics-ingest on
+     `127.0.0.1:9091` (localhost-only), VictoriaMetrics on `127.0.0.1:8428`
+     (localhost-only); `make stop` = `docker compose down` — it never passes
+     `-v`, so metrics data is kept; `make restart` = stop then start — data
+     survives (see retention below); `make test` = ingest build + unit tests
+     plus site lint + typecheck, no docker needed; `make test-contract` =
+     brings the compose stack up, runs the contract test against the real
+     VictoriaMetrics, tears the stack down — **on failure the stack is
+     deliberately left running for debugging; tear it down with `make stop`**.
+   - **Metrics captured** (table): series `web_vitals_lcp_ms`,
+     `web_vitals_inp_ms`, `web_vitals_cls`, `web_vitals_ttfb_ms`,
+     `web_vitals_fcp_ms`, each with labels `path` (page pathname), `rating`
+     (`good` / `needs-improvement` / `poor`), and `nav_type` (`navigate` /
+     `reload` / `back-forward` / `prerender`); note that INP only appears
+     after real user interaction.
+   - **Viewing in vmui**: with the stack up, open
+     `http://localhost:8428/vmui` and query any series. Example PromQL —
+     p75 LCP per page over the last 7 days:
+     `quantile_over_time(0.75, web_vitals_lcp_ms[7d])` (results are one value
+     per label set, i.e. per `path`/`rating`/`nav_type` combination).
+   - **Querying over HTTP** (fenced sh block):
+     `curl 'http://127.0.0.1:8428/api/v1/query?query=web_vitals_lcp_ms&latency_offset=1s'`
+     — with the note that VictoriaMetrics' default `-search.latencyOffset` is
+     30s, so instant queries silently omit samples younger than 30 seconds
+     unless `latency_offset=1s` is appended (or you wait 30s).
+   - **Retention and storage**: VictoriaMetrics runs with
+     `-retentionPeriod=12` (12 months); data lives in the named docker volume
+     `vm-data` (mounted at `/victoria-metrics-data`), so it survives
+     `make restart` and `make stop`/`make start`; `make stop` never passes
+     `-v` — deleting data requires explicitly removing the `vm-data` volume.
+   - **Supported runtime**: docker compose via the Makefile is the only
+     supported way to run the site image. Standalone `docker run` of the site
+     image is no longer supported: the image requires `INGEST_PORT` (it exits
+     with a clear error when unset) and a network where the hostname
+     `metrics-ingest` resolves. `docker build` on its own still works.
+   Verify: `make test` exits 0 (no docker invoked), and `git status` shows
+   `README.md` as the only modified tracked file. Commit `README.md` only,
+   message: `CHORE: document the self-hosted Web Vitals pipeline in the README`.
+2. (verify — no code change, no commit) Confirm the milestone is docs-only and
+   everything is still green: `git show --stat HEAD` lists exactly one file,
+   `README.md`; `make test` exits 0; `npm run build` at the repo root exits 0;
+   spot-check the documented facts against the running system — `make start`,
+   then `curl -s -o /dev/null -w '%{http_code}' 'http://127.0.0.1:8428/vmui/'`
+   → 200 and
+   `curl -s 'http://127.0.0.1:8428/api/v1/query?query=quantile_over_time(0.75%2C%20web_vitals_lcp_ms%5B7d%5D)&latency_offset=1s'`
+   → HTTP 200 with `"status":"success"` (an empty result vector is acceptable
+   if the volume holds no samples from the last 7 days), then `make stop`.
+   The working tree must be clean at the end.
+
+**Risks retired:** none (knowledge capture) — but the documented commands and
+URLs are spot-checked against the live stack, so the README cannot ship with
+instructions that do not work.
+
+**Dependencies:** milestone 4 — complete.
 
 ## Stubs & flags ledger
 
@@ -628,8 +735,8 @@ VM data demonstrably survives `make restart` via the named volume.
 
 No feature flags planned: the beacon endpoint is inert until the frontend sends
 to it, so each milestone is safely shippable without dark-launch flags.
-Milestone 4 introduces no temporary artifacts — the compose `site` service,
-nginx proxy, and Make targets are all permanent.
+Milestones 4 and 5 introduce no temporary artifacts — the compose `site`
+service, nginx proxy, Make targets, and README section are all permanent.
 
 ## Open decisions
 
@@ -694,7 +801,11 @@ nginx proxy, and Make targets are all permanent.
    consequence: standalone `docker run` of the site image now requires
    `INGEST_PORT` plus a network resolving `metrics-ingest` (nginx resolves the
    upstream at startup); `docker build` remains fully standalone, and compose
-   is the sole supported runtime path once the Makefile is repointed.
+   is the sole supported runtime path once the Makefile is repointed —
+   documented in the README in milestone 5.
+
+No open decisions remain: all four are resolved, and milestone 5 introduces
+none.
 
 ## Out of scope
 
@@ -704,7 +815,8 @@ unit-test framework is introduced (the SPA has none today; reporter verification
 is manual per PLAN.md milestone 3), no retry queue or buffering in the ingest
 service, no beacon batching, no user identifiers or IP labels, no sendBeacon
 false-return retry logic (fire-and-forget only, per the literal-requirements
-rule).
+rule). Milestone 5 additionally excludes: rewriting the Base44 boilerplate at
+the top of the README, adding a `docs/` folder, and any change to `PLAN.md`.
 
 ## Plan changelog
 
