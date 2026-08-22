@@ -23,6 +23,8 @@ services:
       context: .
     depends_on:
       - metrics-ingest
+    environment:
+      INGEST_PORT: "9091"
     ports:
       - "8099:80"
 
