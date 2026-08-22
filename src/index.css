@@ -116,28 +116,6 @@
     radial-gradient(ellipse 45% 40% at 80% 85%, rgba(201, 162, 92, 0.05), transparent 60%);
 }
 
-/* Scroll-reveal transitions (driven by the Reveal component) */
-.reveal {
-  opacity: 0;
-  transform: translateY(28px);
-  transition:
-    opacity 0.9s cubic-bezier(0.16, 1, 0.3, 1),
-    transform 0.9s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.reveal.is-visible {
-  opacity: 1;
-  transform: none;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .reveal {
-    opacity: 1;
-    transform: none;
-    transition: none;
-  }
-}
-
 /* Gold underline that draws in on hover */
 .link-draw {
   position: relative;

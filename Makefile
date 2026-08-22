@@ -1,16 +1,19 @@
-IMAGE := josemleon-com
-CONTAINER := josemleon-com
-PORT := 8099
-
-.PHONY: build start stop restart
+.PHONY: build start stop restart test test-contract
 
 build:
-	docker build -t $(IMAGE) .
+	docker compose build
 
 start:
-	docker run -d --name $(CONTAINER) -p $(PORT):80 $(IMAGE)
+	docker compose up -d
 
 stop:
-	docker rm -f $(CONTAINER)
+	docker compose down
 
 restart: stop start
+
+test:
+	cd metrics-ingest && npm run build && npm test
+	npm run lint && npm run typecheck
+
+test-contract:
+	cd metrics-ingest && npm run compose:up && npm run test:contract && npm run compose:down

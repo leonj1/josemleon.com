@@ -1,36 +1,8 @@
-import React, { useEffect, useRef, useState } from "react";
+import React from "react";
 
+// Entrance animation removed: it held content at opacity 0 through a 0.9s
+// fade, which pushed LCP on content pages to ~1.3s. Content now renders
+// immediately. The `delay` prop is kept so call sites need no changes.
 export default function Reveal({ children, delay = 0, className = "" }) {
-  const ref = useRef(null);
-  const [visible, setVisible] = useState(false);
-
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    if (typeof IntersectionObserver === "undefined") {
-      setVisible(true);
-      return;
-    }
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setVisible(true);
-          observer.disconnect();
-        }
-      },
-      { threshold: 0.12, rootMargin: "0px 0px -40px 0px" }
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
-
-  return (
-    <div
-      ref={ref}
-      className={`reveal ${visible ? "is-visible" : ""} ${className}`}
-      style={delay ? { transitionDelay: `${delay}ms` } : undefined}
-    >
-      {children}
-    </div>
-  );
+  return <div className={className}>{children}</div>;
 }
