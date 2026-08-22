@@ -1,5 +1,5 @@
 import { createServer } from "node:http";
-import { StubMetricsStore } from "./clients/StubMetricsStore.js";
+import { VictoriaMetricsStore } from "./clients/VictoriaMetricsStore.js";
 import { type ConfigError, ingestConfigFromEnv } from "./models/IngestConfig.js";
 import { IngestRoute } from "./routes/IngestRoute.js";
 import { MetricsService } from "./services/MetricsService.js";
@@ -21,7 +21,7 @@ function main(): void {
     process.stderr.write(`${configErrorMessage(config.error)}\n`);
     process.exit(1);
   }
-  const route = new IngestRoute(new MetricsService(new StubMetricsStore()));
+  const route = new IngestRoute(new MetricsService(new VictoriaMetricsStore(config.value.vmImportUrl)));
   const server = createServer(route.listener());
   server.listen(config.value.port, () => {
     process.stdout.write(`metrics-ingest listening on port ${config.value.port}\n`);
