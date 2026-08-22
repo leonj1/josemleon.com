@@ -5,7 +5,7 @@ server {
     index index.html;
 
     location = /metrics {
-        proxy_pass http://metrics-ingest:${INGEST_PORT}/metrics;
+        proxy_pass http://${INGEST_HOST}:${INGEST_PORT}/metrics;
     }
 
     location / {
