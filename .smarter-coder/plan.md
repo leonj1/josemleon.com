@@ -39,14 +39,27 @@ Findings:
   sits in jsconfig's `exclude` list but is still checked because it is
   import-reachable from included files (`exclude` only limits the `include`
   globs, not import resolution). Repaired type-only in milestone 3 step 1
-  (revised); no runtime behavior change.
-- `Dockerfile` (repo root): multi-stage node:22-alpine build → nginx:1.27-alpine,
-  envsubst of `nginx.conf.template` with `$PORT` only. The template's envsubst
-  variable list must gain `$INGEST_PORT` when the `/metrics` proxy location is
-  added (milestone 4). nginx serves the SPA with `try_files ... /index.html`.
-- `Makefile`: plain `docker build`/`docker run` targets `build/start/stop/restart`
-  on port 8099; no `test` target and no docker-compose usage yet (milestone 4
-  repoints it and adds `test`).
+  (revised); no runtime behavior change. **Verified: typecheck is genuinely
+  green from milestone 3 onward.**
+- `Dockerfile` (repo root, read again at milestone 4 elaboration): multi-stage
+  node:22-alpine build → nginx:1.27-alpine; the SPA build is copied to
+  `/usr/share/nginx/html` and `nginx.conf.template` to
+  `/etc/nginx/templates/default.conf.template`; the exact runtime line is
+  `CMD export PORT="${PORT:-80}" && envsubst '$PORT' < /etc/nginx/templates/default.conf.template > /etc/nginx/conf.d/default.conf && exec nginx -g 'daemon off;'`
+  — i.e. envsubst's variable list is the single-quoted `'$PORT'` argument, and
+  `PORT` has a pre-existing `:-80` default. `nginx.conf.template` is one
+  `server` block: `listen ${PORT};`, SPA `try_files $uri $uri/ /index.html;`.
+  Milestone 4 adds the `/metrics` proxy location, `$INGEST_PORT` to the
+  envsubst list, and a fail-clearly guard for a missing `INGEST_PORT`.
+- `Makefile` (read again at milestone 4 elaboration): variables
+  `IMAGE := josemleon-com`, `CONTAINER := josemleon-com`, `PORT := 8099`;
+  targets `build` (`docker build -t $(IMAGE) .`), `start`
+  (`docker run -d --name $(CONTAINER) -p $(PORT):80 $(IMAGE)` — publishes
+  **8099 on all interfaces**), `stop` (`docker rm -f $(CONTAINER)`),
+  `restart: stop start`; no `test` target, no compose usage. Milestone 4
+  repoints these at compose and adds `test`/`test-contract`. A stale container
+  named `josemleon-com` from the old workflow may still hold port 8099 on a dev
+  host — remove it before the first `make start` under compose.
 - Site `package.json` scripts: `build` = `vite build`, `lint` = `eslint . --quiet`,
   `typecheck` = `tsc -p ./jsconfig.json`. **No test framework exists in the repo**
   (no vitest/jest), so the ingest service did not inherit one.
@@ -70,6 +83,13 @@ Findings:
   `compose:up` / `compose:down` / `test:contract` scripts exist in
   `metrics-ingest/package.json`; the contract test lives under
   `tests/contract/` and runs against the compose stack.
+- Milestone 3 outcome (verified): typecheck baseline repaired (type-only);
+  `web-vitals` 6.1.1 installed; `src/lib/vitals-reporter.js` sends one beacon
+  per metric (sendBeacon with fetch-keepalive fallback, navigationType
+  normalized/dropped per the ingest contract), wired once in `src/main.jsx`;
+  `vite.config.js` `server.proxy` forwards `/metrics` to
+  `http://127.0.0.1:9091`; verified end-to-end with real browser samples
+  landing in VM through the dev proxy; site lint/typecheck/build all green.
 - **VictoriaMetrics instant-query gotcha (learned in milestone 2 execution):**
   VM's default `-search.latencyOffset` is **30s**, so `/api/v1/query` silently
   hides samples younger than 30 seconds. The contract test appends
@@ -87,6 +107,14 @@ Findings:
   normalize/drop logic (milestone 3 step 2) covers every member:
   `back-forward-cache` → `back-forward`; `restore`, `soft-navigation`, and
   undefined are dropped before sending.
+- **No interactive browser on this host.** Milestone 4's end-to-end
+  verification uses headless Chrome (`google-chrome --headless=new`) against
+  `http://localhost:8099`. Consequences: INP may legitimately be absent
+  (it needs user interaction); LCP/CLS flush on page close, which headless
+  page teardown triggers.
+- Host port **5173 is occupied by an unrelated dev server**. Irrelevant to
+  production wiring (nothing in milestone 4 touches 5173) — recorded only to
+  avoid confusion if a `npm run dev` is attempted during verification.
 
 Build/test commands the executor should run:
 
@@ -104,9 +132,8 @@ Build/test commands the executor should run:
   - Docker: `docker build -t metrics-ingest ./metrics-ingest` (from repo root).
 - **Site** (from `/home/jose/src/josemleon.com`):
   - `npm run lint`, `npm run typecheck`, `npm run build`. No site unit tests;
-    all three must stay green at the end of every milestone-3 code step
-    (typecheck becomes genuinely green in milestone 3 step 1 — see the baseline
-    defect finding above).
+    all three green since milestone 3 and must stay green at the end of every
+    code step.
 - **Whole system** (from milestone 4 onward): `make build`, `make test`,
   `make start`, `make stop`, `make restart` at repo root.
 
@@ -335,14 +362,14 @@ behavior is proven against the real stopped container (step 3). Execution also
 surfaced the `-search.latencyOffset` 30s query gotcha, now recorded in Codebase
 findings and baked into all later verification instructions.
 
-### Milestone 3 — Frontend beacon (NEXT — fully elaborated; revised at plan revision 2)
+### Milestone 3 — Frontend beacon (COMPLETE — verified; revised at plan revision 2)
 
 **Goal:** The SPA reports real Web Vitals through the full dev path (browser →
 vite dev proxy → metrics-ingest → VictoriaMetrics).
 
-**Working state at the end:** `npm run typecheck` at the repo root exits 0 with
-zero errors (the pre-existing `app-params.js` baseline defect is repaired,
-type-only); `web-vitals` (6.1.1) is a site dependency;
+**Working state at the end (reached and verified):** `npm run typecheck` at the
+repo root exits 0 with zero errors (the pre-existing `app-params.js` baseline
+defect is repaired, type-only); `web-vitals` (6.1.1) is a site dependency;
 `src/lib/vitals-reporter.js` sends one beacon per metric via
 `navigator.sendBeacon('/metrics', ...)` with a `fetch` keepalive fallback when
 sendBeacon is unavailable, wired once in `src/main.jsx`; `vite.config.js`
@@ -352,12 +379,7 @@ stack up, browsing the dev site makes samples for the visited paths appear via
 `npm run typecheck`, `npm run build` all green; the `metrics-ingest` project is
 untouched.
 
-**Steps** (execute in order; steps 1–3 are code steps — run
-`npm run lint && npm run typecheck && npm run build` from
-`/home/jose/src/josemleon.com` at the end of each and keep all three green;
-this milestone touches only the site, never `metrics-ingest/`. Note: the
-working tree already contains step 2's uncommitted work — step 1 must commit
-only its own two files and leave the rest uncommitted):
+**Steps** (all executed and verified; retained for the record):
 
 1. (refactor) Repair the pre-existing typecheck baseline defect — type-only, no
    runtime behavior change. `npm run typecheck` (`tsc -p ./jsconfig.json`)
@@ -428,32 +450,10 @@ only its own two files and leave the rest uncommitted):
    `/metrics` routing is nginx's job in milestone 4. Verify lint/typecheck/build
    green. Commit `FEAT: proxy /metrics to metrics-ingest in vite dev server`.
 4. (verify — manual end-to-end, no code change, no commit) Prove the full dev
-   path with a real browser:
-   - `cd /home/jose/src/josemleon.com/metrics-ingest && npm run compose:up`,
-     then confirm `curl -s http://127.0.0.1:9091/healthz` returns 200 and
-     `curl -s http://127.0.0.1:8428/health` returns OK.
-   - `cd /home/jose/src/josemleon.com && npm run dev` and open the printed URL
-     (default `http://localhost:5173`) in a browser.
-   - Browse: load the home page, navigate to at least one other route (e.g.
-     `/projects`), interact (click links/buttons, scroll) so INP and CLS have
-     input, then **hide the tab (switch tabs or minimize)** — web-vitals flushes
-     LCP/CLS/INP on visibility change.
-   - Query (note the **required** `latency_offset=1s` — without it VM hides
-     samples younger than 30s):
-     `curl -s 'http://127.0.0.1:8428/api/v1/query?query=web_vitals_lcp_ms&latency_offset=1s'`
-     and the same for `web_vitals_fcp_ms`, `web_vitals_ttfb_ms`,
-     `web_vitals_cls`, `web_vitals_inp_ms`. Success criteria: LCP/FCP/TTFB
-     return non-empty result vectors with `path` labels matching the routes you
-     visited and `nav_type="navigate"` (or `"reload"` after a reload); CLS and
-     INP appear after the interact-then-hide sequence. Optionally eyeball the
-     same series in vmui at `http://127.0.0.1:8428/vmui/`.
-   - Confirm the ingest logs no 400s for these beacons
-     (`docker compose logs metrics-ingest` from the repo root).
-   - Teardown: stop the dev server, then
-     `cd /home/jose/src/josemleon.com/metrics-ingest && npm run compose:down`.
-   - Finish with `npm run lint && npm run typecheck && npm run build` (site)
-     and `cd metrics-ingest && npm run build && npm test` (44 tests) green to
-     confirm nothing regressed.
+   path with a real browser: compose stack up, browse the dev site, confirm the
+   five series appear via `/api/v1/query?...&latency_offset=1s` and in vmui,
+   no ingest 400s, then tear down and confirm site checks + 44 ingest tests
+   still green. (Executed and verified with real browser samples in VM.)
 
 **Risks retired:** the site's typecheck gate is made genuinely green (baseline
 `app-params.js` defect repaired type-only), so every later "all three green"
@@ -466,26 +466,148 @@ path works end to end from a real browser into the real store.
 **Dependencies:** milestone 2 (a real store to land samples in for manual
 verification) — complete.
 
-### Milestone 4 — Production wiring
+### Milestone 4 — Production wiring (NEXT — fully elaborated)
 
-- **Goal:** One-command production topology: site + ingest + VM under compose,
-  driven by the Makefile.
-- **Working state at the end:** root `docker-compose.yml` gains the `site`
-  service alongside the existing `metrics-ingest` + `victoriametrics`;
-  `nginx.conf.template` gains
-  `location = /metrics { proxy_pass http://metrics-ingest:$INGEST_PORT/metrics; }`
-  and the Dockerfile envsubst list gains `$INGEST_PORT`; Makefile
-  `build/start/stop/restart` repointed at compose and `make test` runs ingest
-  unit tests + site lint/typecheck; `make start`, browse
-  `http://localhost:8099`, samples visible in vmui and via
-  `curl 'http://localhost:8428/api/v1/query?query=web_vitals_lcp_ms&latency_offset=1s'`
-  (the `latency_offset=1s` parameter is required on all verification curls —
-  VM's default 30s `-search.latencyOffset` otherwise hides fresh samples; see
-  Codebase findings); data survives `make restart`.
-- **Risks retired:** nginx proxy templating with two envsubst vars; compose
-  replaces docker-run without breaking the existing site workflow; persistence
-  across restart.
-- **Dependencies:** milestones 2 and 3.
+**Goal:** One-command production topology: site + ingest + VM under compose,
+driven by the Makefile.
+
+**Working state at the end:** root `docker-compose.yml` has the `site` service
+(existing root Dockerfile, published on `8099:80` exactly as today's Makefile
+publishes, `INGEST_PORT=9091` in its environment) alongside `metrics-ingest` +
+`victoriametrics`; `nginx.conf.template` proxies `location = /metrics` to
+`http://metrics-ingest:${INGEST_PORT}/metrics` and the Dockerfile envsubst list
+is `'$PORT $INGEST_PORT'` with a fail-clearly guard when `INGEST_PORT` is
+unset; Makefile `build/start/stop/restart` drive compose (named volume
+`vm-data` survives `make restart`), `make test` runs ingest build + 44 unit
+tests + site lint + typecheck with no docker, and `make test-contract` wraps
+the compose contract-test workflow; `make start`, load `http://localhost:8099`
+pages (headless Chrome), and the Web Vitals series are queryable via
+`curl 'http://127.0.0.1:8428/api/v1/query?query=web_vitals_lcp_ms&latency_offset=1s'`
+(the `latency_offset=1s` parameter is required on all verification curls —
+VM's default 30s `-search.latencyOffset` otherwise hides fresh samples; see
+Codebase findings) and in vmui; a beacon written before `make restart` is still
+queryable after it.
+
+**Steps** (execute in order from `/home/jose/src/josemleon.com`; every step
+ends with `cd metrics-ingest && npm run build && npm test` (44 tests) and
+`npm run lint && npm run typecheck && npm run build` at the repo root all
+green; this milestone never touches `metrics-ingest/src` or the SPA source):
+
+1. (behavior) Run the site under compose and repoint the Makefile run targets.
+   In `/home/jose/src/josemleon.com/docker-compose.yml` add a third service
+   `site` (keep the existing two services and the `vm-data` volume untouched,
+   no `container_name`): `build: { context: . }` (the existing root
+   Dockerfile), `depends_on: [metrics-ingest]`, `ports: ["8099:80"]` —
+   all-interfaces on 8099, exact parity with today's
+   `docker run -p 8099:80` (VM and ingest stay `127.0.0.1`-only); do **not**
+   set `PORT` (the container keeps its pre-existing `${PORT:-80}` default and
+   nginx listens on 80) and do **not** set `INGEST_PORT` yet (nothing consumes
+   it until step 2). Rewrite `/home/jose/src/josemleon.com/Makefile`: delete
+   the `IMAGE`/`CONTAINER`/`PORT` variables and the `docker build`/`docker
+   run`/`docker rm` bodies; new targets — `build:` = `docker compose build`,
+   `start:` = `docker compose up -d`, `stop:` = `docker compose down` (never
+   pass `-v`; the named volume `vm-data` must survive), `restart: stop start`;
+   `.PHONY: build start stop restart`. Verify: first remove any stale
+   container from the old workflow (`docker rm -f josemleon-com` — ignore
+   "no such container"); `make build`; `make start`; poll then curl
+   `http://localhost:8099/` → 200 with the SPA `index.html` (contains
+   `<div id="root">`); `curl http://127.0.0.1:9091/healthz` → 200 and
+   `curl http://127.0.0.1:8428/health` → OK (all three services up);
+   `make restart` → site answers again; `make stop` → `docker compose ps`
+   shows nothing; also confirm the standalone image build still works:
+   `docker build -t josemleon-com .` succeeds. Finish with the ingest tests
+   and site lint/typecheck/build green (untouched by this step). Commit
+   `docker-compose.yml` + `Makefile` with
+   `FEAT: run the site under docker compose via the Makefile`.
+2. (behavior) Proxy `/metrics` from the site's nginx to metrics-ingest.
+   (a) In `/home/jose/src/josemleon.com/nginx.conf.template`, inside the
+   `server` block above the existing `location /`, add:
+   `location = /metrics { proxy_pass http://metrics-ingest:${INGEST_PORT}/metrics; }`
+   (use `${INGEST_PORT}`, matching the template's existing `${PORT}` style).
+   (b) In `/home/jose/src/josemleon.com/Dockerfile`, change the CMD line to
+   `CMD export PORT="${PORT:-80}" && : "${INGEST_PORT:?INGEST_PORT is required}" && envsubst '$PORT $INGEST_PORT' < /etc/nginx/templates/default.conf.template > /etc/nginx/conf.d/default.conf && exec nginx -g 'daemon off;'`
+   — two changes only: the `:?` guard makes a missing `INGEST_PORT` exit
+   non-zero with a message naming the variable (no default, per resolved Open
+   decision #4; the pre-existing `PORT` `:-80` default stays as-is), and the
+   envsubst variable list gains `$INGEST_PORT`.
+   (c) In `docker-compose.yml`, add `environment: INGEST_PORT: "9091"` to the
+   `site` service (9091 = the ingest container's `PORT`; container-to-container
+   traffic on the compose network, unrelated to the `127.0.0.1:9091` host
+   publish).
+   Verify: `make build && make start`; poll `http://localhost:8099/` → 200;
+   `curl -s -o /dev/null -w '%{http_code}' -X POST -d '{"name":"LCP","value":2412.5,"rating":"good","path":"/step2-smoke","navType":"navigate"}' http://localhost:8099/metrics`
+   → `204` (browser path: nginx → ingest → VM); then
+   `curl -s 'http://127.0.0.1:8428/api/v1/query?query=web_vitals_lcp_ms%7Bpath%3D%22%2Fstep2-smoke%22%7D&latency_offset=1s'`
+   → non-empty result with `rating="good"`, `nav_type="navigate"`; an invalid
+   beacon (`-d '{}'`) through `http://localhost:8099/metrics` → `400`;
+   `make stop`. Fail-clearly check: `docker run --rm josemleon-com` (image
+   from step 1's standalone build check, rebuilt here:
+   `docker build -t josemleon-com .`) with no `INGEST_PORT` exits non-zero
+   printing a message naming `INGEST_PORT`. Known, accepted consequence
+   (record only, do not "fix"): running the site image standalone **with**
+   `INGEST_PORT` set now also requires a network where the hostname
+   `metrics-ingest` resolves — nginx exits with "host not found in upstream"
+   otherwise; `docker build` is unaffected and compose is the supported
+   runtime path (see resolved Open decision #4). Finish with ingest tests and
+   site lint/typecheck/build green. Commit `nginx.conf.template` +
+   `Dockerfile` + `docker-compose.yml` with
+   `FEAT: proxy /metrics from the site nginx to metrics-ingest`.
+3. (behavior) Add `make test` and `make test-contract` per resolved Open
+   decision #3. In `/home/jose/src/josemleon.com/Makefile` add:
+   `test:` with two recipe lines —
+   `cd metrics-ingest && npm run build && npm test` and
+   `npm run lint && npm run typecheck` (each Make recipe line runs in its own
+   shell at the repo root, so the `cd` is scoped to its line); and
+   `test-contract:` with one recipe line —
+   `cd metrics-ingest && npm run compose:up && npm run test:contract && npm run compose:down`
+   (on failure the stack is deliberately left up for debugging — tear down
+   with `make stop`). Extend `.PHONY` with `test test-contract`. Verify:
+   `make test` exits 0 and its output shows the 44 ingest tests, eslint, and
+   tsc all passing while invoking no docker command; `make test-contract`
+   exits 0 (contract test green against the now three-service stack — this
+   also proves the compose file change did not break the milestone-2
+   scripts); confirm site `npm run build` still green. Commit `Makefile` with
+   `FEAT: add make test and make test-contract targets`.
+4. (verify — end-to-end production-path verification with headless Chrome; no
+   code change, no commit) Prove the definition-of-done flow on the real
+   production topology:
+   - `docker rm -f josemleon-com` if a stale old-workflow container exists;
+     `make start`; poll `http://localhost:8099/` (bounded ~60s) → 200.
+   - Generate real browser samples (no interactive browser on this host):
+     `google-chrome --headless=new --virtual-time-budget=10000 --dump-dom http://localhost:8099/ > /dev/null`
+     then the same for `http://localhost:8099/projects`. Each run loads the
+     SPA, the reporter sends beacons via `/metrics` through nginx, and page
+     close flushes LCP/CLS.
+   - Query each of the five series (the `latency_offset=1s` is required):
+     `curl -s 'http://127.0.0.1:8428/api/v1/query?query=<SERIES>&latency_offset=1s'`
+     for `web_vitals_lcp_ms`, `web_vitals_fcp_ms`, `web_vitals_ttfb_ms`,
+     `web_vitals_cls`, `web_vitals_inp_ms`. Success criteria: LCP, FCP, TTFB,
+     and CLS return non-empty vectors with `path` labels including `/` and
+     `/projects` and `nav_type="navigate"`; **INP may legitimately be absent**
+     (it requires user interaction, which headless page loads do not produce)
+     — absence of INP alone is not a failure. Optionally confirm vmui serves:
+     `curl -s -o /dev/null -w '%{http_code}' 'http://127.0.0.1:8428/vmui/'`
+     → 200.
+   - Confirm zero 400s for the browser beacons:
+     `docker compose logs metrics-ingest` shows no 400 responses.
+   - Persistence across restart: POST a uniquely-labeled beacon
+     `{"name":"LCP","value":2412.5,"rating":"good","path":"/persist-<epoch-ms>","navType":"navigate"}`
+     to `http://localhost:8099/metrics` → 204; `make restart`; poll
+     `http://127.0.0.1:8428/health` until OK; then
+     `curl -s 'http://127.0.0.1:8428/api/v1/query?query=web_vitals_lcp_ms%7Bpath%3D%22%2Fpersist-<epoch-ms>%22%7D&latency_offset=1s'`
+     → the sample is still present (named volume `vm-data` survived
+     `docker compose down`/`up`).
+   - Teardown: `make stop`. Final gates: `make test` green and site
+     `npm run build` green.
+
+**Risks retired:** nginx proxy templating with two envsubst variables works
+(and a missing `INGEST_PORT` fails clearly, never a half-rendered config);
+compose fully replaces the docker-run workflow on the same host port 8099
+without breaking the standalone `docker build`; the full production request
+path (browser → nginx → ingest → VM) carries real headless-browser beacons;
+VM data demonstrably survives `make restart` via the named volume.
+
+**Dependencies:** milestones 2 and 3 — both complete.
 
 ### Milestone 5 — Docs
 
@@ -506,6 +628,8 @@ verification) — complete.
 
 No feature flags planned: the beacon endpoint is inert until the frontend sends
 to it, so each milestone is safely shippable without dark-launch flags.
+Milestone 4 introduces no temporary artifacts — the compose `site` service,
+nginx proxy, and Make targets are all permanent.
 
 ## Open decisions
 
@@ -535,19 +659,42 @@ to it, so each milestone is safely shippable without dark-launch flags.
    that breaks plain `npm run dev` for no benefit; (c) `127.0.0.1` rather than
    `localhost` avoids Node resolving `localhost` to `::1` and missing the
    IPv4-only published compose port.
-3. **`make test` composition details** — whether it includes `npm run typecheck`
-   alongside lint. Decide when elaborating milestone 4 (note: typecheck is
-   genuinely green from milestone 3 step 1 onward, so including it is now
-   viable). The contract-test half is settled by decision #1: contract tests
-   never run under the default unit-test entry point; milestone 4 may add a
-   thin `make test-contract` wrapper over
-   `compose:up`/`test:contract`/`compose:down`, but `make test` stays
-   docker-free.
-4. **INGEST_PORT value and env plumbing** through compose/site container.
-   Partially constrained by milestone 2: compose sets `PORT=9091` on the
-   `metrics-ingest` service and publishes `127.0.0.1:9091:9091`; milestone 4
-   decides how `$INGEST_PORT` reaches the site container's nginx template
-   (expected value 9091).
+3. **`make test` composition** — **RESOLVED (milestone 4 elaboration).**
+   `make test` = ingest `npm run build && npm test` (tsc compile + 44 unit
+   tests) followed by site `npm run lint && npm run typecheck`; it invokes no
+   docker. Rationale: (a) PLAN.md specifies exactly "metrics-ingest tests +
+   site lint/typecheck"; (b) typecheck is **included** because the baseline
+   defect was repaired type-only in milestone 3 step 1 (plan revision 2), so
+   typecheck is now a meaningful green gate rather than perma-red noise;
+   (c) the ingest `npm run build` is kept in front of `npm test` because it is
+   the established milestone gate (`npm run build && npm test`) and catches
+   compile errors the tsx-loader test run can mask; (d) site `npm run build`
+   is deliberately excluded — the production bundle is `make build`'s concern
+   (the Docker image runs `npm run build` inside), and keeping `make test`
+   fast and docker-free preserves the tight loop; (e) per decision #1,
+   contract tests stay out of `make test`; a thin `make test-contract` target
+   (`compose:up && test:contract && compose:down`, run from
+   `metrics-ingest/`) is added in milestone 4 step 3 as the documented
+   docker-backed entry point.
+4. **`INGEST_PORT` value and env plumbing** — **RESOLVED (milestone 4
+   elaboration).** Value: **9091**, matching the `PORT` the compose file
+   already sets on the `metrics-ingest` service — the site's nginx dials the
+   ingest **container** port over the compose network (the `127.0.0.1:9091`
+   host publish is irrelevant to container-to-container traffic). Plumbing:
+   `docker-compose.yml` sets `INGEST_PORT: "9091"` in the `site` service's
+   `environment`; the site Dockerfile's CMD gains
+   `: "${INGEST_PORT:?INGEST_PORT is required}"` and the envsubst list becomes
+   `'$PORT $INGEST_PORT'`; the template references `${INGEST_PORT}` inside
+   `location = /metrics`. Rationale: (a) **no default** for `INGEST_PORT`, per
+   the no-implicit-defaults rule — a container missing it must exit non-zero
+   naming the variable, not start with a half-rendered config (the
+   pre-existing `${PORT:-80}` default is grandfathered and untouched); (b) the
+   value lives in compose, the single place that already pins 9091, so there
+   is exactly one file to change if the port ever moves; (c) accepted
+   consequence: standalone `docker run` of the site image now requires
+   `INGEST_PORT` plus a network resolving `metrics-ingest` (nginx resolves the
+   upstream at startup); `docker build` remains fully standalone, and compose
+   is the sole supported runtime path once the Makefile is repointed.
 
 ## Out of scope
 
