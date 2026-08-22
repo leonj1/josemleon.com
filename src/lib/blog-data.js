@@ -27,12 +27,6 @@ const blogPosts = {
       ],
     },
     {
-      title: "Building Scalable AI Infrastructure",
-      date: "2026-01-15",
-      excerpt:
-        "Lessons learned from scaling AI platforms to 250,000 requests per second.",
-    },
-    {
       title: "Multi-Agent Systems in Production",
       date: "2025-12-08",
       excerpt:
