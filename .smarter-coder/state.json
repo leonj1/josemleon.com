@@ -1,25 +1,25 @@
 {
   "workflow": "smarter-coder",
-  "status": "in_progress",
+  "status": "complete",
   "feature": "Make the Web Vitals metrics stack local-only: site Docker image starts on Railway with zero metrics env vars (no INGEST_PORT guard, no /metrics proxy), production bundle ships no web-vitals/beacon code, docker-compose local behavior unchanged, README documents the new contract.",
   "planPath": ".smarter-coder/plan.md",
-  "planRevision": 1,
-  "currentMilestone": 1,
+  "planRevision": 3,
+  "currentMilestone": 3,
   "milestones": {
     "1": {
       "intentChecked": true,
-      "verified": false,
+      "verified": true,
       "approvedRevision": 1
     },
     "2": {
-      "intentChecked": false,
-      "verified": false,
-      "approvedRevision": 1
+      "intentChecked": true,
+      "verified": true,
+      "approvedRevision": 2
     },
     "3": {
-      "intentChecked": false,
-      "verified": false,
-      "approvedRevision": 1
+      "intentChecked": true,
+      "verified": true,
+      "approvedRevision": 3
     }
   }
 }

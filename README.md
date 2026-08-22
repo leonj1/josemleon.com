@@ -131,3 +131,15 @@ The local compose `site` service sets `METRICS_PROXY=1` and
 `INGEST_PORT=9091`, preserving the `/metrics` connection to the
 `metrics-ingest` service. Use the Make targets above for the supported local
 metrics stack.
+
+Metrics are a local-compose-only concern: the production frontend bundle
+contains no web-vitals/beacon code unless the image is built with the
+`ENABLE_METRICS=1` build arg (compose passes it; `docker build` defaults it
+to `0`, so a plain build ships a metrics-free bundle).
+
+```sh
+docker build --build-arg ENABLE_METRICS=1 -t site-with-metrics .
+```
+
+In `npm run dev`, the vitals reporter stays on through the existing Vite
+`/metrics` proxy regardless of the flag.

@@ -176,9 +176,11 @@ complete.
   vs `'true'` for both flags;
   recommended `'1'` to match the current compose style (`INGEST_PORT: "9091"`
   string-number idiom).
-- **Railway config file** (decide at M3, likely "no"): whether to add a
+- **Railway config file** (decide at M3, likely "no" — **DECIDED at M3: no
+  `railway.json`**): whether to add a
   `railway.json` pinning the Dockerfile build — current default behavior
-  already suffices.
+  already suffices (Railway builds the root Dockerfile with no args;
+  `ARG ENABLE_METRICS=0` governs; the image starts with zero env vars).
 
 ## Out of scope
 
