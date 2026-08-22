@@ -1,12 +1,20 @@
-import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import React from "react";
+import { Link, Navigate } from "react-router-dom";
 import { ArrowRight } from "lucide-react";
 import { categories, blogPosts } from "@/lib/blog-data";
 import SiteNav from "@/components/landing/SiteNav";
 import Reveal from "@/components/landing/Reveal";
 
-export default function Blog() {
-  const [activeCategory, setActiveCategory] = useState("Technical");
+const categoryKeys = Object.fromEntries(
+  categories.map((category) => [category.toLowerCase(), category])
+);
+
+export default function Blog({ category }) {
+  const activeCategory = categoryKeys[category];
+
+  if (!activeCategory) {
+    return <Navigate to="/Blog/technical" replace />;
+  }
 
   return (
     <div className="grain min-h-screen bg-ink text-ivory">
@@ -38,9 +46,9 @@ export default function Blog() {
         <div className="max-w-6xl mx-auto px-6 md:px-10">
           <div className="flex gap-8 md:gap-10 py-5">
             {categories.map((category) => (
-              <button
+              <Link
                 key={category}
-                onClick={() => setActiveCategory(category)}
+                to={`/Blog/${category.toLowerCase()}`}
                 className={`font-mono text-[11px] tracking-[0.25em] uppercase transition-colors ${
                   activeCategory === category
                     ? "text-gold-bright border-b border-gold pb-1"
@@ -48,7 +56,7 @@ export default function Blog() {
                 }`}
               >
                 {category}
-              </button>
+              </Link>
             ))}
           </div>
         </div>

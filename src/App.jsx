@@ -4,6 +4,7 @@ import { queryClientInstance } from '@/lib/query-client'
 import { pagesConfig } from './pages.config'
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
+import Blog from './pages/Blog';
 import BlogPost from './pages/BlogPost';
 import ProjectDetail from './pages/ProjectDetail';
 
@@ -34,6 +35,21 @@ const AppRoutes = () => {
           }
         />
       ))}
+      <Route path="/Blog/technical" element={
+        <LayoutWrapper currentPageName="Blog">
+          <Blog category="technical" />
+        </LayoutWrapper>
+      } />
+      <Route path="/Blog/managerial" element={
+        <LayoutWrapper currentPageName="Blog">
+          <Blog category="managerial" />
+        </LayoutWrapper>
+      } />
+      <Route path="/Blog/personal" element={
+        <LayoutWrapper currentPageName="Blog">
+          <Blog category="personal" />
+        </LayoutWrapper>
+      } />
       <Route path="/Blog/:slug" element={
         <LayoutWrapper currentPageName="BlogPost">
           <BlogPost />
