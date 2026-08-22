@@ -5,7 +5,10 @@
   "type": "module",
   "scripts": {
     "build": "tsc",
-    "test": "node --import tsx --test \"tests/*.test.ts\""
+    "test": "node --import tsx --test \"tests/*.test.ts\"",
+    "compose:up": "docker compose -f ../docker-compose.yml up -d --build",
+    "compose:down": "docker compose -f ../docker-compose.yml down",
+    "test:contract": "node --import tsx --test \"tests/contract/*.test.ts\""
   },
   "devDependencies": {
     "@types/node": "^24.3.0",
