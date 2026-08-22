@@ -26,12 +26,6 @@ const blogPosts = {
         "Tag releases.",
       ],
     },
-    {
-      title: "Multi-Agent Systems in Production",
-      date: "2025-12-08",
-      excerpt:
-        "Practical approaches to deploying autonomous agent frameworks.",
-    },
   ],
   Managerial: [
     {
