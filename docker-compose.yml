@@ -23,9 +23,12 @@ services:
   site:
     build:
       context: .
+      args:
+        ENABLE_METRICS: "1"
     depends_on:
       - metrics-ingest
     environment:
+      METRICS_PROXY: "1"
       INGEST_PORT: "9091"
     ports:
       - "8099:80"

@@ -1,15 +1,25 @@
 {
   "workflow": "smarter-coder",
   "status": "complete",
-  "feature": "Self-hosted Web Vitals metrics pipeline per PLAN.md: SPA beacon -> nginx -> metrics-ingest -> VictoriaMetrics, queryable in vmui and the Prometheus HTTP API, persisting across make restart, with unit + contract tests and make build/test/start/stop/restart working.",
+  "feature": "Make the Web Vitals metrics stack local-only: site Docker image starts on Railway with zero metrics env vars (no INGEST_PORT guard, no /metrics proxy), production bundle ships no web-vitals/beacon code, docker-compose local behavior unchanged, README documents the new contract.",
   "planPath": ".smarter-coder/plan.md",
-  "planRevision": 2,
-  "currentMilestone": 5,
+  "planRevision": 3,
+  "currentMilestone": 3,
   "milestones": {
-    "1": { "intentChecked": true, "verified": true, "approvedRevision": 1 },
-    "2": { "intentChecked": true, "verified": true, "approvedRevision": 1 },
-    "3": { "intentChecked": true, "verified": true, "approvedRevision": 2 },
-    "4": { "intentChecked": true, "verified": true, "approvedRevision": 2 },
-    "5": { "intentChecked": true, "verified": true, "approvedRevision": 2 }
+    "1": {
+      "intentChecked": true,
+      "verified": true,
+      "approvedRevision": 1
+    },
+    "2": {
+      "intentChecked": true,
+      "verified": true,
+      "approvedRevision": 2
+    },
+    "3": {
+      "intentChecked": true,
+      "verified": true,
+      "approvedRevision": 3
+    }
   }
 }
