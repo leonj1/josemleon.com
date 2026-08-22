@@ -18,5 +18,13 @@ services:
     ports:
       - "127.0.0.1:9091:9091"
 
+  site:
+    build:
+      context: .
+    depends_on:
+      - metrics-ingest
+    ports:
+      - "8099:80"
+
 volumes:
   vm-data:

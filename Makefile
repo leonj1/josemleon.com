@@ -1,16 +1,12 @@
-IMAGE := josemleon-com
-CONTAINER := josemleon-com
-PORT := 8099
-
 .PHONY: build start stop restart
 
 build:
-	docker build -t $(IMAGE) .
+	docker compose build
 
 start:
-	docker run -d --name $(CONTAINER) -p $(PORT):80 $(IMAGE)
+	docker compose up -d
 
 stop:
-	docker rm -f $(CONTAINER)
+	docker compose down
 
 restart: stop start
