@@ -35,7 +35,7 @@ export default function Blog({ category }) {
           </Reveal>
           <Reveal delay={200}>
             <p className="font-serif italic text-lg md:text-xl text-smoke mt-6">
-              Thoughts on technology, leadership, and life.
+              Thoughts on technology, leadership, life, and travel.
             </p>
           </Reveal>
         </div>

@@ -50,6 +50,11 @@ const AppRoutes = () => {
           <Blog category="personal" />
         </LayoutWrapper>
       } />
+      <Route path="/Blog/travel" element={
+        <LayoutWrapper currentPageName="Blog">
+          <Blog category="travel" />
+        </LayoutWrapper>
+      } />
       <Route path="/Blog/:slug" element={
         <LayoutWrapper currentPageName="BlogPost">
           <BlogPost />
