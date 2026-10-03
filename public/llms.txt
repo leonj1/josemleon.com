@@ -2,7 +2,7 @@
 
 ## Site
 
-- [Home](https://josemleon.com/): Bio, credentials, and GitHub contribution chart.
+- [Home](https://josemleon.com/): Jose Explorer: a Process Explorer–style site map of bio, work, projects, and writing.
 - [Writing](https://josemleon.com/Blog): Blog index.
 - [Projects](https://josemleon.com/projects): Project index.
 

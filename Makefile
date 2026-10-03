@@ -13,7 +13,7 @@ restart: stop start
 
 test:
 	cd metrics-ingest && npm run build && npm test
-	npm run lint && npm run typecheck
+	npm run lint && npm run typecheck && npm test
 
 test-image:
 	./scripts/verify-site-image.sh
